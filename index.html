@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LG Sales Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --lg-red: #a50034; --dark: #212121; --accent: #27ae60; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; color: #333; padding-bottom: 50px; }
+        header { background: var(--lg-red); color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-item { text-align: center; border: 1px solid #eee; padding: 10px; border-radius: 8px; }
+        .stat-value { font-size: 1.2rem; font-weight: bold; color: var(--lg-red); }
+        .stat-label { font-size: 0.75rem; color: #666; text-transform: uppercase; }
+        label { display: block; margin-top: 10px; font-weight: bold; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        button { width: 100%; padding: 12px; margin-top: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-save { background: var(--lg-red); color: white; }
+        .btn-tab { background: #eee; color: #333; margin: 5px 2px; width: 30%; font-size: 0.8rem; }
+        .active-tab { background: var(--dark); color: white; }
+        .sale-row { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        .delete-btn { background: #ff4444; color: white; width: auto; padding: 5px 10px; font-size: 0.8rem; margin: 0; }
+        .edit-btn { background: #f39c12; color: white; width: auto; padding: 5px 10px; font-size: 0.8rem; margin-right: 5px; }
+        #tab-content { margin-top: 10px; }
+        .hidden { display: none; }
+        .projection-card { background: #fafffa; border: 1px dashed var(--accent); }
+        .ranking-badge { background: #eee; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; }
+
+        /* ÖZEL SEÇİCİ STİLLERİ */
+        .custom-dropdown { position: relative; width: 100%; margin-top: 5px; }
+        .dropdown-trigger { 
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; 
+            background: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+        }
+        .dropdown-menu { 
+            position: absolute; top: 100%; left: 0; right: 0; background: white; 
+            border: 1px solid #ddd; border-radius: 8px; z-index: 1000; display: none;
+            max-height: 250px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .dropdown-menu.show { display: block; }
+        .dropdown-search-box { 
+            position: sticky; top: 0; background: white; padding: 8px; 
+            border-bottom: 1px solid #eee; z-index: 10;
+        }
+        .dropdown-search-box input { 
+            padding: 8px; margin-top: 0; border: 1px solid var(--lg-red); font-size: 0.9rem;
+        }
+        .dropdown-option { padding: 12px; cursor: pointer; border-bottom: 1px solid #f9f9f9; }
+        .dropdown-option:hover { background: #f5f5f5; color: var(--lg-red); }
+        .dropdown-option.selected { background: #fff0f3; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8d/LG_logo_%282014%29.svg" width="60" style="filter: brightness(0) invert(1);">
+    <div style="font-size: 0.8rem;">TELEVİZYON</div>
+</header>
+
+<div class="container">
+    <div class="card">
+        <div class="stats-grid">
+            <div class="stat-item" style="grid-column: span 2;"><div class="stat-label">Toplam Reyon Cirosu</div><div id="dash-top-ciro" class="stat-value">0 TL</div></div>
+            <div class="stat-item"><div class="stat-label">LG Cirosu</div><div id="dash-lg-ciro" class="stat-value">0 TL</div></div>
+            <div class="stat-item"><div class="stat-label">Toplam Prim</div><div id="dash-prim" class="stat-value">0 TL</div></div>
+            <div class="stat-item"><div class="stat-label">Pazar Payı</div><div id="dash-pay" class="stat-value">%0</div></div>
+            <div class="stat-item"><div class="stat-label">Hedef Durumu</div><div id="dash-hedef" class="stat-value">%0</div></div>
+        </div>
+    </div>
+
+    <div style="text-align: center;">
+        <button class="btn-tab active-tab" onclick="showTab('satis')">Satış Gir</button>
+        <button class="btn-tab" onclick="showTab('ayarlar')">Ürün/Hedef</button>
+        <button class="btn-tab" onclick="showTab('analiz')">Analiz</button>
+    </div>
+
+    <div id="tab-content">
+        <div id="satis-section">
+            <div class="card">
+                <h3>Yeni Satış Kaydı</h3>
+                <label>Marka</label>
+                <select id="f-marka" onchange="updateModelSelect()"><option value="LG">LG</option><option value="Rakip">Rakip</option></select>
+                
+                <label>Model</label>
+                <div class="custom-dropdown" id="lg-dropdown-container">
+                    <div class="dropdown-trigger" id="dropdown-display" onclick="toggleDropdown()">Model Seçin... <span>▼</span></div>
+                    <div class="dropdown-menu" id="dropdown-menu">
+                        <div class="dropdown-search-box">
+                            <input type="text" id="m-search" placeholder="🔍 Model ara..." oninput="filterModels(this.value)">
+                        </div>
+                        <div id="dropdown-options"></div>
+                    </div>
+                </div>
+                <select id="f-model" class="hidden"></select>
+
+                <label>Satış Fiyatı (TL)</label><input type="number" id="f-fiyat" placeholder="0">
+                <label>Adet</label><input type="number" id="f-adet" value="1">
+                <button class="btn-save" onclick="kaydet()">SATIŞI KAYDET</button>
+            </div>
+            <div class="card"><h3>Son Satışlar</h3><div id="satis-listesi"></div></div>
+        </div>
+
+        <div id="ayarlar-section" class="hidden">
+            <div class="card">
+                <h3>Aylık Hedef Belirle</h3>
+                <input type="number" id="cfg-hedef" placeholder="Hedef TL">
+                <button class="btn-save" style="background:var(--dark)" onclick="hedefGuncelle()">Hedefi Güncelle</button>
+            </div>
+            <div class="card">
+                <h3>Yeni LG Modeli Tanımla</h3>
+                <input type="text" id="m-ad" placeholder="Model İsmi">
+                <input type="number" id="m-fiyat" placeholder="Liste Fiyatı">
+                <input type="number" id="m-prim" placeholder="Birim Prim">
+                <button class="btn-save" onclick="urunEkle()">Sisteme Ekle</button>
+            </div>
+            <div class="card">
+                <h3>Kayıtlı LG Modelleri</h3>
+                <div id="urun-listesi"></div>
+            </div>
+        </div>
+
+        <div id="analiz-section" class="hidden">
+            <div class="card projection-card">
+                <h3>Hedef Projeksiyonu</h3>
+                <div id="proj-data">
+                    <p>Günlük Ortalama: <b id="proj-avg">0 TL</b></p>
+                    <p>Ay Sonu Tahmini: <b id="proj-est">0 TL</b></p>
+                    <p>Tahmini Hedef: <b id="proj-perc">%0</b></p>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Satış Analizi (LG)</h3>
+                <select id="rank-range" onchange="renderRanking()">
+                    <option value="7">Son 7 Gün</option>
+                    <option value="15">Son 15 Gün</option>
+                    <option value="30">Son 30 Gün (Bu Ay)</option>
+                </select>
+                <div id="ranking-list" style="margin-top:15px;"></div>
+            </div>
+            <div class="card">
+                <h3>Pazar Payı Dağılımı</h3>
+                <canvas id="payChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let satislar = JSON.parse(localStorage.getItem('lg_satislar')) || [];
+    let urunler = JSON.parse(localStorage.getItem('lg_urunler')) || [];
+    let hedef = localStorage.getItem('lg_hedef') || 1000000;
+    let myChart = null;
+    let selectedLGModel = "";
+
+    function init() {
+        updateModelSelect();
+        renderStats();
+        renderSales();
+        renderUrunler();
+        document.getElementById('cfg-hedef').value = hedef;
+    }
+
+    // --- DROPDOWN FONKSİYONLARI ---
+    function toggleDropdown() {
+        const menu = document.getElementById('dropdown-menu');
+        menu.classList.toggle('show');
+        if(menu.classList.contains('show')) document.getElementById('m-search').focus();
+    }
+
+    // Menü dışına tıklandığında kapatma
+    window.onclick = function(event) {
+        if (!event.target.matches('.dropdown-trigger') && !event.target.matches('#m-search')) {
+            document.getElementById('dropdown-menu').classList.remove('show');
+        }
+    }
+
+    function filterModels(val) {
+        const filter = val.toUpperCase();
+        const options = document.getElementsByClassName("dropdown-option");
+        for (let i = 0; i < options.length; i++) {
+            let txtValue = options[i].textContent || options[i].innerText;
+            options[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+        }
+    }
+
+    function selectModel(modelName) {
+        selectedLGModel = modelName;
+        document.getElementById('dropdown-display').innerHTML = modelName + " <span>▼</span>";
+        document.getElementById('dropdown-menu').classList.remove('show');
+        
+        const urun = urunler.find(u => u.model === modelName);
+        if(urun) document.getElementById('f-fiyat').value = urun.fiyat;
+    }
+
+    function updateModelSelect() {
+        const marka = document.getElementById('f-marka').value;
+        const lgContainer = document.getElementById('lg-dropdown-container');
+        const rakipSelect = document.getElementById('f-model');
+        const optionsDiv = document.getElementById('dropdown-options');
+        
+        optionsDiv.innerHTML = "";
+        rakipSelect.innerHTML = "";
+
+        if(marka === "LG") {
+            lgContainer.classList.remove('hidden');
+            rakipSelect.classList.add('hidden');
+            selectedLGModel = "";
+            document.getElementById('dropdown-display').innerHTML = "Model Seçin... <span>▼</span>";
+            
+            urunler.forEach(u => {
+                const opt = document.createElement('div');
+                opt.className = 'dropdown-option';
+                opt.innerText = u.model;
+                opt.onclick = () => selectModel(u.model);
+                optionsDiv.appendChild(opt);
+            });
+        } else {
+            lgContainer.classList.add('hidden');
+            rakipSelect.classList.remove('hidden');
+            rakipSelect.innerHTML = `<option value="Rakip Cihaz">Rakip Cihaz</option>`;
+            document.getElementById('f-fiyat').value = "";
+        }
+    }
+
+    function kaydet() {
+        const marka = document.getElementById('f-marka').value;
+        const modelAd = (marka === "LG") ? selectedLGModel : "Rakip Cihaz";
+        const fiyat = parseFloat(document.getElementById('f-fiyat').value) || 0;
+        const adet = parseInt(document.getElementById('f-adet').value) || 1;
+
+        if(!modelAd || modelAd === "Model Seçin..." || fiyat <= 0) return alert("Lütfen model ve fiyat girin!");
+
+        let prim = marka === "LG" ? (urunler.find(u => u.model === modelAd)?.prim || 0) * adet : 0;
+        
+        satislar.push({ 
+            id: Date.now(), 
+            timestamp: new Date().getTime(),
+            tarih: new Date().toLocaleDateString('tr-TR'), 
+            marka, modelAd, fiyat: fiyat * adet, prim, adet 
+        });
+
+        localStorage.setItem('lg_satislar', JSON.stringify(satislar));
+        renderStats(); renderSales(); alert("Satış Başarıyla Kaydedildi!");
+        // Formu temizle
+        if(marka === "LG") {
+            selectedLGModel = "";
+            document.getElementById('dropdown-display').innerHTML = "Model Seçin... <span>▼</span>";
+            document.getElementById('m-search').value = "";
+            filterModels("");
+        }
+        document.getElementById('f-fiyat').value = "";
+    }
+
+    // --- ANALİZ VE PROJEKSİYON (Değişmedi) ---
+    function renderRanking() {
+        const gun = document.getElementById('rank-range').value;
+        const ms = gun * 24 * 60 * 60 * 1000;
+        const simdi = Date.now();
+        const filtreli = satislar.filter(s => (simdi - s.id) <= ms && s.marka === "LG");
+        const counts = {};
+        filtreli.forEach(s => counts[s.modelAd] = (counts[s.modelAd] || 0) + s.adet);
+        const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+        const container = document.getElementById('ranking-list');
+        container.innerHTML = sorted.length ? sorted.map(([ad, adet]) => `
+            <div class="sale-row"><span>${ad}</span><span class="ranking-badge">${adet} Adet</span></div>`).join('') : "<p style='font-size:0.8rem; color:grey;'>Veri bulunamadı.</p>";
+    }
+
+    function runProjection() {
+        const simdi = new Date();
+        const gecenGun = simdi.getDate();
+        const toplamGun = new Date(simdi.getFullYear(), simdi.getMonth() + 1, 0).getDate();
+        const buAyLg = satislar.filter(s => {
+            const d = new Date(s.id);
+            return d.getMonth() === simdi.getMonth() && s.marka === "LG";
+        }).reduce((a, b) => a + b.fiyat, 0);
+        const gunlukAvg = buAyLg / gecenGun;
+        const tahmin = gunlukAvg * toplamGun;
+        const tahYuzde = (tahmin / hedef) * 100;
+        document.getElementById('proj-avg').innerText = Math.round(gunlukAvg).toLocaleString() + " TL";
+        document.getElementById('proj-est').innerText = Math.round(tahmin).toLocaleString() + " TL";
+        document.getElementById('proj-perc').innerText = "%" + (isNaN(tahYuzde) ? 0 : tahYuzde.toFixed(1));
+    }
+
+    function drawChart() {
+        const lg = satislar.filter(s => s.marka === "LG").reduce((a, b) => a + b.fiyat, 0);
+        const rakip = satislar.filter(s => s.marka === "Rakip").reduce((a, b) => a + b.fiyat, 0);
+        const ctx = document.getElementById('payChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['LG', 'Rakip'],
+                datasets: [{ data: [lg, rakip], backgroundColor: ['#a50034', '#ccc'] }]
+            },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    function renderStats() {
+        const lg = satislar.filter(s => s.marka === "LG").reduce((a, b) => a + b.fiyat, 0);
+        const top = satislar.reduce((a, b) => a + b.fiyat, 0);
+        const prm = satislar.reduce((a, b) => a + b.prim, 0);
+        document.getElementById('dash-top-ciro').innerText = top.toLocaleString() + " TL";
+        document.getElementById('dash-lg-ciro').innerText = lg.toLocaleString() + " TL";
+        document.getElementById('dash-prim').innerText = prm.toLocaleString() + " TL";
+        document.getElementById('dash-pay').innerText = "%" + (top > 0 ? ((lg/top)*100).toFixed(1) : 0);
+        document.getElementById('dash-hedef').innerText = "%" + ((lg/hedef)*100).toFixed(1);
+    }
+
+    function renderSales() {
+        document.getElementById('satis-listesi').innerHTML = satislar.slice().reverse().map(s => `
+            <div class="sale-row">
+                <div><strong>${s.modelAd}</strong> <small>(${s.marka})</small><br><small>${s.tarih}</small></div>
+                <div style="text-align:right"><b>${s.fiyat.toLocaleString()} TL</b><br><button class="delete-btn" onclick="sil(${s.id})">Sil</button></div>
+            </div>`).join('');
+    }
+
+    function showTab(tab) {
+        document.getElementById('satis-section').classList.toggle('hidden', tab !== 'satis');
+        document.getElementById('ayarlar-section').classList.toggle('hidden', tab !== 'ayarlar');
+        document.getElementById('analiz-section').classList.toggle('hidden', tab !== 'analiz');
+        document.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active-tab'));
+        event.currentTarget.classList.add('active-tab');
+        if(tab === 'analiz') { renderRanking(); runProjection(); drawChart(); }
+    }
+
+    function urunEkle() {
+        const ad = document.getElementById('m-ad').value;
+        const fiyat = document.getElementById('m-fiyat').value;
+        const prim = document.getElementById('m-prim').value;
+        if(!ad || !fiyat) return alert("Eksik!");
+        const idx = urunler.findIndex(u => u.model === ad);
+        if(idx > -1) urunler[idx] = {model: ad, fiyat: parseFloat(fiyat), prim: parseFloat(prim) || 0};
+        else urunler.push({model: ad, fiyat: parseFloat(fiyat), prim: parseFloat(prim) || 0});
+        localStorage.setItem('lg_urunler', JSON.stringify(urunler));
+        renderUrunler(); updateModelSelect(); alert("Tamam!");
+        document.getElementById('m-ad').value = ""; document.getElementById('m-fiyat').value = ""; document.getElementById('m-prim').value = "";
+    }
+
+    function renderUrunler() {
+        document.getElementById('urun-listesi').innerHTML = urunler.map((u, i) => `
+            <div class="sale-row">
+                <div><strong>${u.model}</strong><br><small>${u.fiyat.toLocaleString()} TL / Prim: ${u.prim}</small></div>
+                <div><button class="edit-btn" onclick="urunDuzenle(${i})">Düzenle</button><button class="delete-btn" onclick="urunSil(${i})">Sil</button></div>
+            </div>`).join('');
+    }
+
+    function urunSil(i) { if(confirm("Sil?")) { urunler.splice(i,1); localStorage.setItem('lg_urunler', JSON.stringify(urunler)); renderUrunler(); updateModelSelect(); } }
+    function urunDuzenle(i) { const u = urunler[i]; document.getElementById('m-ad').value = u.model; document.getElementById('m-fiyat').value = u.fiyat; document.getElementById('m-prim').value = u.prim; document.getElementById('m-ad').focus(); }
+    function sil(id) { if(confirm("Sil?")) { satislar = satislar.filter(s => s.id !== id); localStorage.setItem('lg_satislar', JSON.stringify(satislar)); renderStats(); renderSales(); } }
+    function hedefGuncelle() { hedef = document.getElementById('cfg-hedef').value; localStorage.setItem('lg_hedef', hedef); renderStats(); alert("Güncellendi!"); }
+
+    init();
+</script>
+</body>
+</html>
