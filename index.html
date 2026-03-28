@@ -280,6 +280,7 @@
         .model-name { font-weight: 700; color: #222; font-size: 1rem; }
         .brand-tag { font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 600; }
         .sale-date { font-size: 0.75rem; color: #999; }
+        
         .adet-badge { 
             background-color: #ffeef2; 
             color: var(--lg-red); 
@@ -288,6 +289,17 @@
             font-size: 0.7rem; 
             font-weight: 700; 
             margin-left: 6px;
+        }
+        
+        /* Yeşil prim kutucuğu */
+        .prim-badge {
+            background-color: #e6f4ea;
+            color: #1e7e34;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 4px;
         }
 
         .sale-actions { text-align: right; }
@@ -333,6 +345,16 @@
         .market-goal-box { background: white; border-radius: 14px; border-left: 4px solid var(--blue); padding: 18px; margin-top: 20px; box-shadow: var(--shadow-sm); }
         
         .hidden { display: none !important; }
+
+        .top-seller-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 5px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.95rem;
+        }
+        .top-seller-item:last-child { border-bottom: none; }
+        .top-seller-count { font-weight: 700; color: var(--lg-red); }
         
         @media (max-width: 480px) {
             .container { padding: 15px; }
@@ -473,6 +495,19 @@
                 </div>
             </div>
             <div id="market-goal-result" class="market-goal-box">Hesaplanıyor...</div>
+            
+            <div class="card">
+                <h3>En Çok Satan Modeller</h3>
+                <label>Zaman Aralığı</label>
+                <select id="filter-days" onchange="render()" style="margin-bottom:15px;">
+                    <option value="7">Son 7 Gün</option>
+                    <option value="15">Son 15 Gün</option>
+                    <option value="30" selected>Son 30 Gün</option>
+                    <option value="999">Tüm Zamanlar</option>
+                </select>
+                <div id="top-selling-list"></div>
+            </div>
+
             <div class="card">
                 <canvas id="payChart"></canvas>
             </div>
@@ -481,7 +516,6 @@
 </div>
 
 <script>
-    // GitHub'daki (index.html) veri anahtarlarıyla (localStorage keys) eşleşme sağlandı
     let satislar = JSON.parse(localStorage.getItem('lg_satislar')) || []; 
     let urunler = JSON.parse(localStorage.getItem('lg_urunler')) || [];
     let hedef = localStorage.getItem('lg_hedef') || "1000000";
@@ -534,7 +568,6 @@
 
     function kaydet() {
         let marka = document.getElementById('f-marka').value;
-        // GitHub sürümüyle uyumlu değişken adı (modelAd) kullanıldı
         let modelAd = marka === "LG" ? selectedLGModel : "Rakip Cihaz"; 
         let fiyat = parseInt(toSayi(document.getElementById('f-fiyat').value)) || 0;
         let adet = parseInt(document.getElementById('f-adet').value) || 1;
@@ -596,10 +629,15 @@
         let hedefYuzde = (lg / hedefSayi) * 100;
         document.getElementById('dash-goal-badge').innerText = "Hedef: %" + (isNaN(hedefYuzde) ? 0 : hedefYuzde.toFixed(1));
 
+        // Satış Listesi (Prim yeşil badge olarak güncellendi)
         document.getElementById('satis-listesi').innerHTML = satislar.slice().reverse().map(s => `
             <div class="sale-row">
                 <div class="sale-info">
-                    <span class="model-name">${s.modelAd} <span class="adet-badge">${s.adet}</span></span>
+                    <span class="model-name">
+                        ${s.modelAd} 
+                        <span class="adet-badge">${s.adet} Adet</span>
+                        ${s.prim > 0 ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
+                    </span>
                     <span class="brand-tag">${s.marka}</span>
                     <span class="sale-date">${s.tarih} ${s.not ? '| ' + s.not : ''}</span>
                 </div>
@@ -630,6 +668,37 @@
         `).join('');
 
         analiz(lg, top);
+        renderTopSellers();
+    }
+
+    function renderTopSellers() {
+        const days = parseInt(document.getElementById('filter-days').value) || 30;
+        const now = new Date();
+        
+        let filtered = satislar.filter(s => {
+            if(days === 999) return true;
+            const [d, m, y] = s.tarih.split('.');
+            const sDate = new Date(y, m - 1, d);
+            const diff = (now - sDate) / (1000 * 60 * 60 * 24);
+            return diff <= days;
+        });
+
+        let counts = {};
+        filtered.forEach(s => {
+            if(s.marka === "LG") {
+                counts[s.modelAd] = (counts[s.modelAd] || 0) + s.adet;
+            }
+        });
+
+        let sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        let html = sorted.length > 0 ? sorted.map(([m, a]) => `
+            <div class="top-seller-item">
+                <span>${m}</span>
+                <span class="top-seller-count">${a} Adet</span>
+            </div>
+        `).join('') : '<p style="color:#999; font-size:0.85rem; text-align:center;">Veri bulunamadı.</p>';
+
+        document.getElementById('top-selling-list').innerHTML = html;
     }
 
     function analiz(lg, top) {
