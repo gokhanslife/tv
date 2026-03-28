@@ -497,9 +497,9 @@
                 <h3>En Çok Satan Modeller</h3>
                 <label>Zaman Aralığı</label>
                 <select id="filter-days" onchange="render()" style="margin-bottom:15px;">
-                    <option value="7">Son 7 Gün</option>
+                    <option value="7" selected>Son 7 Gün</option>
                     <option value="15">Son 15 Gün</option>
-                    <option value="30" selected>Son 30 Gün</option>
+                    <option value="30">Son 30 Gün</option>
                     <option value="999">Tüm Zamanlar</option>
                 </select>
                 <div id="top-selling-list"></div>
@@ -626,7 +626,6 @@
         let hedefYuzde = (lg / hedefSayi) * 100;
         document.getElementById('dash-goal-badge').innerText = "Hedef: %" + (isNaN(hedefYuzde) ? 0 : hedefYuzde.toFixed(1));
 
-        // Satış Listesi (Badge'ler LG yazısının yanına taşındı)
         document.getElementById('satis-listesi').innerHTML = satislar.slice().reverse().map(s => `
             <div class="sale-row">
                 <div class="sale-info">
@@ -669,7 +668,7 @@
     }
 
     function renderTopSellers() {
-        const days = parseInt(document.getElementById('filter-days').value) || 30;
+        const days = parseInt(document.getElementById('filter-days').value) || 7;
         const now = new Date();
         let filtered = satislar.filter(s => {
             if(days === 999) return true;
