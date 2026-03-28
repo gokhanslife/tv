@@ -276,33 +276,31 @@
             align-items: center; 
         }
 
-        .sale-info { display: flex; flex-direction: column; gap: 4px; }
-        .model-name { font-weight: 700; color: #222; font-size: 1rem; }
+        .sale-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+        .model-name { font-weight: 700; color: #222; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .brand-meta { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
         .brand-tag { font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 600; }
         .sale-date { font-size: 0.75rem; color: #999; }
         
         .adet-badge { 
             background-color: #ffeef2; 
             color: var(--lg-red); 
-            padding: 3px 8px; 
+            padding: 2px 8px; 
             border-radius: 6px; 
             font-size: 0.7rem; 
             font-weight: 700; 
-            margin-left: 6px;
         }
         
-        /* Yeşil prim kutucuğu */
         .prim-badge {
             background-color: #e6f4ea;
             color: #1e7e34;
-            padding: 3px 8px;
+            padding: 2px 8px;
             border-radius: 6px;
             font-size: 0.7rem;
             font-weight: 700;
-            margin-left: 4px;
         }
 
-        .sale-actions { text-align: right; }
+        .sale-actions { text-align: right; min-width: 100px; }
         .sale-price { font-size: 1.1rem; font-weight: 700; color: #222; display: block; margin-bottom: 5px;}
         
         .action-buttons { display: flex; gap: 5px; justify-content: flex-end;}
@@ -361,6 +359,7 @@
             .stats-grid-premium { gap: 10px; }
             .stat-card-sm .stat-value { font-size: 1rem; }
             .main-ciro-card .stat-value { font-size: 2.2rem; }
+            .sale-price { font-size: 1rem; }
         }
     </style>
 </head>
@@ -378,10 +377,8 @@
     <div class="dashboard-container">
         <div class="main-ciro-card">
             <div id="dash-goal-badge" class="target-badge">Hedef: %0</div>
-            
             <span class="stat-label">Toplam Reyon Cirosu</span>
             <div id="dash-top-ciro" class="stat-value">0 ₺</div>
-            
             <div class="lifes-good-footer">Life's Good</div>
         </div>
         
@@ -629,16 +626,16 @@
         let hedefYuzde = (lg / hedefSayi) * 100;
         document.getElementById('dash-goal-badge').innerText = "Hedef: %" + (isNaN(hedefYuzde) ? 0 : hedefYuzde.toFixed(1));
 
-        // Satış Listesi (Prim yeşil badge olarak güncellendi)
+        // Satış Listesi (Badge'ler LG yazısının yanına taşındı)
         document.getElementById('satis-listesi').innerHTML = satislar.slice().reverse().map(s => `
             <div class="sale-row">
                 <div class="sale-info">
-                    <span class="model-name">
-                        ${s.modelAd} 
+                    <span class="model-name">${s.modelAd}</span>
+                    <div class="brand-meta">
+                        <span class="brand-tag">${s.marka}</span>
                         <span class="adet-badge">${s.adet} Adet</span>
                         ${s.prim > 0 ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
-                    </span>
-                    <span class="brand-tag">${s.marka}</span>
+                    </div>
                     <span class="sale-date">${s.tarih} ${s.not ? '| ' + s.not : ''}</span>
                 </div>
                 <div class="sale-actions">
@@ -674,7 +671,6 @@
     function renderTopSellers() {
         const days = parseInt(document.getElementById('filter-days').value) || 30;
         const now = new Date();
-        
         let filtered = satislar.filter(s => {
             if(days === 999) return true;
             const [d, m, y] = s.tarih.split('.');
@@ -682,14 +678,8 @@
             const diff = (now - sDate) / (1000 * 60 * 60 * 24);
             return diff <= days;
         });
-
         let counts = {};
-        filtered.forEach(s => {
-            if(s.marka === "LG") {
-                counts[s.modelAd] = (counts[s.modelAd] || 0) + s.adet;
-            }
-        });
-
+        filtered.forEach(s => { if(s.marka === "LG") counts[s.modelAd] = (counts[s.modelAd] || 0) + s.adet; });
         let sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
         let html = sorted.length > 0 ? sorted.map(([m, a]) => `
             <div class="top-seller-item">
@@ -697,7 +687,6 @@
                 <span class="top-seller-count">${a} Adet</span>
             </div>
         `).join('') : '<p style="color:#999; font-size:0.85rem; text-align:center;">Veri bulunamadı.</p>';
-
         document.getElementById('top-selling-list').innerHTML = html;
     }
 
@@ -722,7 +711,6 @@
                 goalBox.innerHTML = `✅ Tebrikler! Pazar payın %${(currentPay*100).toFixed(1)} ile hedefin üzerinde.`;
             }
         }
-
         const ctx = document.getElementById('payChart').getContext('2d');
         if(myChart) myChart.destroy();
         myChart = new Chart(ctx, {
@@ -758,19 +746,11 @@
         let fiyat = toSayi(document.getElementById('m-fiyat').value);
         let prim = toSayi(document.getElementById('m-prim').value);
         let index = document.getElementById('edit-urun-index').value;
-
         if(!model || !fiyat) return alert("Eksik bilgi!");
-
-        if(index !== "") {
-            urunler[index] = {model, fiyat: parseInt(fiyat), prim: parseInt(prim) || 0};
-        } else {
-            urunler.push({model, fiyat: parseInt(fiyat), prim: parseInt(prim) || 0});
-        }
-        
+        if(index !== "") urunler[index] = {model, fiyat: parseInt(fiyat), prim: parseInt(prim) || 0};
+        else urunler.push({model, fiyat: parseInt(fiyat), prim: parseInt(prim) || 0});
         localStorage.setItem('lg_urunler', JSON.stringify(urunler));
-        urunFormSifirla();
-        updateModelSelect(); 
-        render();
+        urunFormSifirla(); updateModelSelect(); render();
     }
 
     function urunDuzenle(i) {
