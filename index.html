@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LG TV Sales Pro | Premium Dashboard</title>
+    <title>LG Sales Pro | Multi-Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -22,397 +22,125 @@
             --blue: #2980b9;
         }
 
-        body { 
-            font-family: 'Inter', sans-serif; 
-            margin: 0; 
-            background-color: var(--premium-gray); 
-            color: var(--text-main); 
-            padding-bottom: 80px; 
-            overflow-x: hidden;
-            letter-spacing: -0.01em;
+        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--premium-gray); color: var(--text-main); padding-bottom: 80px; overflow-x: hidden; letter-spacing: -0.01em; }
+        
+        /* Ana Sistem Seçici */
+        .system-selector {
+            display: flex;
+            background: #222;
+            padding: 5px;
+            gap: 5px;
+            position: sticky;
+            top: 0;
+            z-index: 1100;
         }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 350px;
-            height: 350px;
-            background: url('https://upload.wikimedia.org/wikipedia/commons/8/8d/LG_logo_%282014%29.svg') no-repeat center;
-            background-size: contain;
-            opacity: 0.04;
-            z-index: -1;
-            pointer-events: none;
+        .sys-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: #888;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
+        .sys-btn.active { background: var(--lg-red); color: white; }
 
         header { 
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             padding: 15px 20px; 
             position: sticky; 
-            top: 0; 
+            top: 50px; /* System selector altı */
             z-index: 1000; 
             box-shadow: var(--shadow-sm); 
             border-bottom: 1px solid #eee;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
         }
 
-        header .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        header img { width: 40px; height: auto; } 
+        header .divider { height: 20px; width: 1px; background-color: #ddd; margin: 0 12px; }
+        header .app-title { font-size: 1rem; font-weight: 700; color: #222; }
+        header .app-title span { color: var(--lg-red); }
 
-        header img { width: 45px; height: auto; } 
-        
-        header .divider {
-            height: 24px;
-            width: 1px;
-            background-color: #ddd;
-        }
-
-        header .app-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #222;
-            letter-spacing: -0.03em;
-        }
-
-        header .app-title span {
-            color: var(--lg-red);
-        }
-
-        .container { 
-            padding: 20px; 
-            max-width: 650px; 
-            margin: auto; 
-        }
-
-        .dashboard-container {
-            margin-bottom: 25px;
-        }
+        .container { padding: 20px; max-width: 650px; margin: auto; }
 
         .main-ciro-card {
             background: linear-gradient(135deg, var(--lg-red) 0%, var(--lg-dark-red) 100%);
-            color: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: var(--shadow-lg);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 20px;
+            color: white; border-radius: 20px; padding: 30px;
+            box-shadow: var(--shadow-lg); text-align: center;
+            position: relative; overflow: hidden; margin-bottom: 20px;
         }
+        .target-badge { position: absolute; top: 15px; right: 15px; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(5px); padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.2); }
+        .main-ciro-card .stat-label { color: rgba(255,255,255,0.8); text-transform: uppercase; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; margin-bottom: 5px; display: block;}
+        .main-ciro-card .stat-value { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.04em; }
 
-        .target-badge {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(5px);
-            padding: 4px 12px;
-            border-radius: 50px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
+        .stats-grid-premium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card-sm { background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); }
+        .stat-card-sm .stat-label { font-size: 0.65rem; color: var(--text-sub); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 5px;}
+        .stat-card-sm .stat-value { font-size: 1rem; font-weight: 700; color: var(--lg-red); }
 
-        .lifes-good-footer {
-            position: absolute;
-            bottom: 10px;
-            right: 15px;
-            font-size: 1.2rem;
-            font-weight: 300;
-            font-style: italic;
-            color: rgba(255, 255, 255, 0.25);
-            pointer-events: none;
-            user-select: none;
-            font-family: 'Inter', sans-serif;
-            letter-spacing: -0.02em;
-        }
+        .premium-nav { background: white; border-radius: 50px; padding: 5px; display: flex; box-shadow: var(--shadow-sm); margin-bottom: 20px; border: 1px solid #eee; }
+        .nav-item { flex: 1; text-align: center; padding: 10px 0; border-radius: 50px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-sub); transition: var(--transition); }
+        .nav-item.active { background-color: var(--lg-red); color: white; }
 
-        .main-ciro-card .stat-label { color: rgba(255,255,255,0.8); text-transform: uppercase; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; margin-bottom: 5px; display: block;}
-        .main-ciro-card .stat-value { font-size: 2.8rem; font-weight: 800; letter-spacing: -0.04em; position: relative; z-index: 2;}
+        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
+        .card h3 { font-size: 1.1rem; font-weight: 700; margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px; }
+        .card h3::before { content: ''; width: 4px; height: 16px; background: var(--lg-red); border-radius: 4px; }
 
-        .stats-grid-premium { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 15px; 
-        }
-
-        .stat-card-sm { 
-            background: white; 
-            border-radius: 16px; 
-            padding: 20px; 
-            text-align: center; 
-            box-shadow: var(--shadow-sm);
-            border: 1px solid rgba(0,0,0,0.03);
-            transition: var(--transition);
-        }
-
-        .stat-card-sm .stat-label { font-size: 0.7rem; color: var(--text-sub); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; display: block; margin-bottom: 8px;}
-        .stat-card-sm .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--lg-red); letter-spacing: -0.02em;}
-
-        .premium-nav {
-            background: white;
-            border-radius: 50px;
-            padding: 6px;
-            display: flex;
-            justify-content: space-between;
-            box-shadow: var(--shadow-sm);
-            margin-bottom: 25px;
-            border: 1px solid #eee;
-        }
-
-        .nav-item {
-            flex: 1;
-            text-align: center;
-            padding: 12px 0;
-            border-radius: 50px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-sub);
-            transition: var(--transition);
-        }
-
-        .nav-item.active {
-            background-color: var(--lg-red);
-            color: white;
-            box-shadow: 0 4px 12px rgba(165,0,52,0.2);
-        }
-
-        .card { 
-            background: white; 
-            border-radius: 20px; 
-            padding: 25px; 
-            margin-bottom: 20px; 
-            box-shadow: var(--shadow-sm); 
-            border: 1px solid rgba(0,0,0,0.03);
-        }
-
-        .card h3 { 
-            font-size: 1.2rem; 
-            font-weight: 700; 
-            margin-top: 0; 
-            margin-bottom: 20px; 
-            color: #222; 
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .card h3::before {
-            content: '';
-            display: block;
-            width: 4px;
-            height: 18px;
-            background-color: var(--lg-red);
-            border-radius: 10px;
-        }
-
-        label { 
-            display: block; 
-            margin-top: 15px; 
-            font-weight: 600; 
-            font-size: 0.85rem; 
-            color: #555;
-            margin-left: 5px;
-        }
-
-        input, select, textarea { 
-            width: 100%; 
-            padding: 14px 18px; 
-            margin-top: 6px; 
-            border: 1px solid #e0e0e0; 
-            border-radius: 12px; 
-            box-sizing: border-box; 
-            font-size: 1rem; 
-            font-family: inherit;
-            background-color: #fafafa;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--lg-red);
-            background-color: white;
-        }
-
-        button { 
-            width: 100%; 
-            padding: 16px; 
-            margin-top: 20px; 
-            border: none; 
-            border-radius: 14px; 
-            font-weight: 700; 
-            font-size: 1rem;
-            cursor: pointer; 
-            transition: var(--transition); 
-        }
-
-        .btn-save { 
-            background-color: var(--lg-red); 
-            color: white; 
-        }
-
-        .btn-vazgec {
-            background-color: #f1f3f5;
-            color: var(--text-sub);
-            margin-top: 10px;
-        }
-
-        .sale-row { 
-            background-color: white;
-            border: 1px solid #eee;
-            border-radius: 16px;
-            padding: 18px; 
-            margin-bottom: 12px;
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-
-        .sale-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
-        .model-name { font-weight: 700; color: #222; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-        .brand-meta { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
-        .brand-tag { font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 600; }
-        .sale-date { font-size: 0.75rem; color: #999; }
+        label { display: block; margin: 12px 0 5px 5px; font-weight: 600; font-size: 0.8rem; color: #555; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 12px; box-sizing: border-box; font-size: 0.95rem; background: #fafafa; }
         
-        .adet-badge { 
-            background-color: #ffeef2; 
-            color: var(--lg-red); 
-            padding: 2px 8px; 
-            border-radius: 6px; 
-            font-size: 0.7rem; 
-            font-weight: 700; 
-        }
+        button { width: 100%; padding: 14px; margin-top: 15px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: var(--transition); }
+        .btn-save { background: var(--lg-red); color: white; }
+        .btn-vazgec { background: #f1f3f5; color: #666; margin-top: 8px; }
+
+        .sale-row { background: white; border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .sale-info { flex: 1; }
+        .model-name { font-weight: 700; font-size: 0.95rem; display: block; }
+        .brand-meta { font-size: 0.7rem; color: var(--text-sub); margin-top: 3px; display: flex; gap: 8px; }
+        .prim-badge { color: #1e7e34; font-weight: 700; }
+        .sale-price { font-weight: 800; font-size: 1rem; text-align: right; }
         
-        .prim-badge {
-            background-color: #e6f4ea;
-            color: #1e7e34;
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            font-weight: 700;
-        }
+        .action-buttons { display: flex; gap: 5px; margin-top: 5px; }
+        .action-buttons button { width: auto; padding: 4px 8px; font-size: 0.7rem; margin: 0; }
 
-        .sale-actions { text-align: right; min-width: 100px; }
-        .sale-price { font-size: 1.1rem; font-weight: 700; color: #222; display: block; margin-bottom: 5px;}
-        
-        .action-buttons { display: flex; gap: 5px; justify-content: flex-end;}
-        .action-buttons button { width: auto; padding: 6px 12px; margin: 0; font-size: 0.75rem; border-radius: 8px;}
-        .edit-btn { background: #f1f3f5; color: #555; }
-        .delete-btn { background: #fff0f0; color: #e03131; }
-
-        .custom-dropdown { position: relative; width: 100%; margin-top: 6px; }
-        .dropdown-trigger { 
-            width: 100%; 
-            padding: 14px 18px; 
-            border: 1px solid #e0e0e0; 
-            border-radius: 12px; 
-            background-color: #fafafa; 
-            cursor: pointer; 
-            display: flex; 
-            justify-content: space-between; 
-            box-sizing: border-box;
-        }
-
-        .dropdown-menu { 
-            position: absolute; 
-            top: 100%; 
-            left: 0; 
-            right: 0; 
-            background: white; 
-            border: 1px solid var(--lg-red); 
-            border-radius: 0 0 12px 12px; 
-            z-index: 1000; 
-            display: none;
-            max-height: 250px; 
-            overflow-y: auto; 
-            box-shadow: var(--shadow-md);
-        }
+        .custom-dropdown { position: relative; }
+        .dropdown-trigger { padding: 12px; border: 1px solid #e0e0e0; border-radius: 12px; background: #fafafa; cursor: pointer; display: flex; justify-content: space-between; }
+        .dropdown-menu { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--lg-red); border-radius: 0 0 12px 12px; z-index: 1000; display: none; max-height: 200px; overflow-y: auto; box-shadow: var(--shadow-md); }
         .dropdown-menu.show { display: block; }
-        .dropdown-option { padding: 12px 18px; cursor: pointer; border-bottom: 1px solid #f9f9f9; }
-        .dropdown-option:hover { background-color: #fff0f3; color: var(--lg-red); }
-
-        .projection-card { background: linear-gradient(135deg, #fafffa 0%, #f0fff4 100%); border: 1px dashed var(--accent); }
-        .market-goal-box { background: white; border-radius: 14px; border-left: 4px solid var(--blue); padding: 18px; margin-top: 20px; box-shadow: var(--shadow-sm); }
-        
-        .history-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
-            margin-top: 20px; 
-            margin-bottom: 25px;
-        }
-        
-        .history-box { 
-            background: #ffffff; 
-            border: 1px solid #ebebeb; 
-            border-radius: 16px; 
-            padding: 18px 10px; 
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .history-icon { font-size: 22px; margin-bottom: 8px; }
-        .history-label { font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
-        .history-val { font-size: 1.05rem; font-weight: 700; color: #222; }
-        .val-lg { color: var(--lg-red); }
-        .val-prim { color: #27ae60; }
-
-        .placeholder-text {
-            text-align: center;
-            padding: 40px 20px;
-            color: #bbb;
-            font-size: 0.9rem;
-        }
+        .dropdown-option { padding: 10px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+        .dropdown-option:hover { background: #fff0f3; }
 
         .hidden { display: none !important; }
-
-        .top-seller-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 5px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 0.95rem;
-        }
-        .top-seller-item:last-child { border-bottom: none; }
-        .top-seller-count { font-weight: 700; color: var(--lg-red); }
-        
-        @media (max-width: 480px) {
-            .container { padding: 15px; }
-            .stats-grid-premium { gap: 10px; }
-            .stat-card-sm .stat-value { font-size: 1rem; }
-            .main-ciro-card .stat-value { font-size: 2.2rem; }
-            .sale-price { font-size: 1rem; }
-        }
+        #market-goal-result { background: #fff; padding: 15px; border-left: 4px solid var(--blue); border-radius: 10px; font-size: 0.9rem; margin-top: 15px; }
     </style>
 </head>
 <body>
 
+<div class="system-selector">
+    <button id="sys-tv" class="sys-btn active" onclick="switchSystem('TV')">📺 TV Paneli</button>
+    <button id="sys-sb" class="sys-btn" onclick="switchSystem('SB')">🔊 Soundbar Paneli</button>
+</div>
+
 <header>
-    <div class="logo-container">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/8/8d/LG_logo_%282014%29.svg">
-        <div class="divider"></div>
-        <div class="app-title">TV <span>Sales Pro</span></div>
-    </div>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8d/LG_logo_%282014%29.svg">
+    <div class="divider"></div>
+    <div class="app-title" id="main-title">TV <span>Sales Pro</span></div>
 </header>
 
 <div class="container">
     <div class="dashboard-container">
         <div class="main-ciro-card">
             <div id="dash-goal-badge" class="target-badge">Hedef: %0</div>
-            <span class="stat-label">Toplam Reyon Cirosu</span>
+            <span class="stat-label" id="label-top-ciro">Toplam TV Cirosu</span>
             <div id="dash-top-ciro" class="stat-value">0 ₺</div>
-            <div class="lifes-good-footer">Life's Good</div>
         </div>
         
         <div class="stats-grid-premium">
@@ -421,7 +149,7 @@
                 <div id="dash-lg-ciro" class="stat-value">0 ₺</div>
             </div>
             <div class="stat-card-sm">
-                <span class="stat-label">Toplam Prim</span>
+                <span class="stat-label">Prim</span>
                 <div id="dash-prim" class="stat-value">0 ₺</div>
             </div>
             <div class="stat-card-sm">
@@ -443,27 +171,27 @@
                 <h3 id="satis-form-title">Yeni Satış Kaydı</h3>
                 <input type="hidden" id="edit-sale-id">
                 
-                <label>Reyon Markası</label>
+                <label>Marka</label>
                 <select id="f-marka" onchange="updateModelSelect()">
                     <option value="LG">LG Electronics</option>
-                    <option value="Rakip">Rakip Marka</option>
+                    <option value="Rakip">Diğer / Rakip</option>
                 </select>
                 
-                <label>Televizyon Modeli</label>
+                <label>Model</label>
                 <div class="custom-dropdown" id="lg-dropdown-container">
                     <div class="dropdown-trigger" id="dropdown-display" onclick="toggleDropdown()">Model Seçin... <span>▼</span></div>
                     <div class="dropdown-menu" id="dropdown-menu">
                         <div style="padding:10px; position:sticky; top:0; background:white;">
-                            <input type="text" id="m-search" placeholder="Model ara..." oninput="filterModels(this.value)">
+                            <input type="text" id="m-search" placeholder="Ara..." oninput="filterModels(this.value)">
                         </div>
                         <div id="dropdown-options"></div>
                     </div>
                 </div>
-                <input type="text" id="f-model-rakip" class="hidden" value="Rakip Cihaz" readonly>
+                <input type="text" id="f-model-rakip" class="hidden" placeholder="Model adı girin">
 
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
                     <div>
-                        <label>Satış Fiyatı (Birim)</label>
+                        <label>Birim Fiyat</label>
                         <input type="text" id="f-fiyat" placeholder="0 ₺" oninput="formatInput(this)">
                     </div>
                     <div>
@@ -472,43 +200,30 @@
                     </div>
                 </div>
                 
-                <label>Özel Not</label>
-                <textarea id="f-not" rows="2" placeholder="Müşteri adı vb."></textarea>
+                <label>Not</label>
+                <textarea id="f-not" rows="1"></textarea>
                 
-                <button class="btn-save" id="btn-satis-kaydet" onclick="kaydet()">SATIŞI KAYDET</button>
+                <button class="btn-save" onclick="kaydet()">KAYDET</button>
                 <button id="btn-satis-vazgec" class="btn-vazgec hidden" onclick="satisFormSifirla()">Vazgeç</button>
             </div>
-            <div class="card">
-                <h3>Son İşlemler</h3>
-                <div id="satis-listesi"></div>
-            </div>
+            <div id="satis-listesi"></div>
         </div>
 
         <div id="ayarlar-section" class="hidden">
             <div class="card">
-                <h3>Aylık LG Hedefi</h3>
-                <label>Hedef Tutar (₺)</label>
+                <h3 id="hedef-title">Aylık TV Hedefi</h3>
                 <input type="text" id="cfg-hedef" oninput="formatInput(this)">
-                <button class="btn-save" onclick="hedefGuncelle()">Güncelle</button>
+                <button class="btn-save" onclick="hedefGuncelle()">Hedefi Güncelle</button>
             </div>
             <div class="card">
                 <h3 id="urun-form-title">Ürün Tanımla</h3>
                 <input type="hidden" id="edit-urun-index">
-                
-                <label>Model İsmi</label>
-                <input type="text" id="m-ad" placeholder="Örn: OLED65C34LA">
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <label>Liste Fiyatı</label>
-                        <input type="text" id="m-fiyat" placeholder="0 ₺" oninput="formatInput(this)">
-                    </div>
-                    <div>
-                        <label>Birim Prim</label>
-                        <input type="text" id="m-prim" placeholder="0 ₺" oninput="formatInput(this)">
-                    </div>
+                <label>Model Adı</label>
+                <input type="text" id="m-ad">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div><label>Liste Fiyatı</label><input type="text" id="m-fiyat" oninput="formatInput(this)"></div>
+                    <div><label>Birim Prim</label><input type="text" id="m-prim" oninput="formatInput(this)"></div>
                 </div>
-                
                 <button class="btn-save" id="btn-urun-ekle" onclick="urunEkle()">Ekle</button>
                 <button id="btn-urun-vazgec" class="btn-vazgec hidden" onclick="urunFormSifirla()">Vazgeç</button>
             </div>
@@ -516,102 +231,64 @@
         </div>
 
         <div id="analiz-section" class="hidden">
-            <div class="card projection-card">
-                <h3>Ay Sonu Tahmini</h3>
-                <div id="proj-data">
-                    <p>Günlük Ortalama: <b id="proj-avg">0 ₺</b></p>
-                    <p>Tahmini Kapanış: <b id="proj-est">0 ₺</b></p>
-                    <p>Hedef Gerçekleşme: <b id="proj-perc">%0</b></p>
+            <div class="card" style="background:#f0fff4; border: 1px dashed var(--accent);">
+                <h3>Tahminleme</h3>
+                <div id="proj-data" style="font-size:0.9rem; line-height:1.8;">
+                    <p>Günlük Ort: <b id="proj-avg">0 ₺</b></p>
+                    <p>Ay Sonu Tahmin: <b id="proj-est">0 ₺</b></p>
                 </div>
             </div>
-            <div id="market-goal-result" class="market-goal-box">Hesaplanıyor...</div>
-            
-            <div class="card">
-                <h3>En Çok Satan Modeller</h3>
-                <label>Zaman Aralığı</label>
-                <select id="filter-days" onchange="render()" style="margin-bottom:15px;">
-                    <option value="7" selected>Son 7 Gün</option>
-                    <option value="15">Son 15 Gün</option>
-                    <option value="30">Son 30 Gün</option>
-                    <option value="999">Tüm Zamanlar</option>
-                </select>
-                <div id="top-selling-list"></div>
-            </div>
-
-            <div class="card">
-                <h3>Geçmiş Ay Verileri</h3>
-                <label>Analiz edilecek ayı seçin</label>
-                <select id="history-month-select" onchange="renderHistory()">
-                    <option value="">-- Seçiniz --</option>
-                </select>
-                
-                <div id="history-placeholder" class="placeholder-text">
-                    Verileri görmek için listeden bir ay seçiniz.
-                </div>
-
-                <div id="history-content" class="hidden">
-                    <div class="history-grid">
-                        <div class="history-box">
-                            <div class="history-icon">🔴</div>
-                            <div class="history-label">LG Cirosu</div>
-                            <div id="h-lg" class="history-val val-lg">0 ₺</div>
-                        </div>
-                        <div class="history-box">
-                            <div class="history-icon">📊</div>
-                            <div class="history-label">Toplam Ciro</div>
-                            <div id="h-top" class="history-val">0 ₺</div>
-                        </div>
-                        <div class="history-box">
-                            <div class="history-icon">📈</div>
-                            <div class="history-label">Pazar Payı</div>
-                            <div id="h-pay" class="history-val">%0</div>
-                        </div>
-                        <div class="history-box">
-                            <div class="history-icon">💰</div>
-                            <div class="history-label">Toplam Prim</div>
-                            <div id="h-prim" class="history-val val-prim">0 ₺</div>
-                        </div>
-                    </div>
-                    
-                    <h4 style="margin: 20px 0 15px 5px; color: #222; font-size: 1rem; border-left: 3px solid var(--lg-red); padding-left: 10px;">O Ay Satılan LG Modelleri</h4>
-                    <div id="history-lg-list"></div>
-                </div>
+            <div id="market-goal-result">Hesaplanıyor...</div>
+            <div class="card" style="margin-top:20px;">
+                <canvas id="payChart"></canvas>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    let satislar = JSON.parse(localStorage.getItem('lg_satislar')) || []; 
-    let urunler = JSON.parse(localStorage.getItem('lg_urunler')) || [];
-    let hedef = localStorage.getItem('lg_hedef') || "1000000";
-    let selectedLGModel = "";
+    // Sistem Durumu
+    let currentSystem = 'TV'; // 'TV' veya 'SB' (Soundbar)
+
+    // Veri Yapıları
+    let data = {
+        TV: {
+            satislar: JSON.parse(localStorage.getItem('lg_satislar')) || [],
+            urunler: JSON.parse(localStorage.getItem('lg_urunler')) || [],
+            hedef: localStorage.getItem('lg_hedef') || "1000000"
+        },
+        SB: {
+            satislar: JSON.parse(localStorage.getItem('lg_satislar_sb')) || [],
+            urunler: JSON.parse(localStorage.getItem('lg_urunler_sb')) || [],
+            hedef: localStorage.getItem('lg_hedef_sb') || "200000"
+        }
+    };
+
+    let myChart = null;
+    let selectedModel = "";
 
     function toNokta(val) { return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
     function toSayi(val) { return val.toString().replace(/\./g, ""); }
     function formatInput(el) { let temiz = el.value.replace(/\D/g, ""); el.value = toNokta(temiz); }
 
-    function init() {
-        document.getElementById('cfg-hedef').value = toNokta(hedef);
+    function switchSystem(sys) {
+        currentSystem = sys;
+        document.getElementById('sys-tv').classList.toggle('active', sys === 'TV');
+        document.getElementById('sys-sb').classList.toggle('active', sys === 'SB');
+        
+        // Başlıkları güncelle
+        document.getElementById('main-title').innerHTML = sys === 'TV' ? 'TV <span>Sales Pro</span>' : 'Soundbar <span>Pro</span>';
+        document.getElementById('label-top-ciro').innerText = sys === 'TV' ? 'Toplam TV Cirosu' : 'Toplam Soundbar Cirosu';
+        document.getElementById('hedef-title').innerText = sys === 'TV' ? 'Aylık TV Hedefi' : 'Aylık Soundbar Hedefi';
+        
+        satisFormSifirla();
+        urunFormSifirla();
         updateModelSelect();
-        updateHistoryMonths();
         render();
     }
 
     function toggleDropdown() { document.getElementById('dropdown-menu').classList.toggle('show'); }
-    function filterModels(val) {
-        let opts = document.getElementsByClassName("dropdown-option");
-        for (let opt of opts) opt.style.display = opt.innerText.toLowerCase().includes(val.toLowerCase()) ? "" : "none";
-    }
-
-    function selectModel(m) {
-        selectedLGModel = m;
-        document.getElementById('dropdown-display').innerHTML = m + " <span>▼</span>";
-        document.getElementById('dropdown-menu').classList.remove('show');
-        let u = urunler.find(x => x.model === m);
-        if(u) document.getElementById('f-fiyat').value = toNokta(u.fiyat);
-    }
-
+    
     function updateModelSelect() {
         let marka = document.getElementById('f-marka').value;
         let lgCont = document.getElementById('lg-dropdown-container');
@@ -621,10 +298,15 @@
 
         if(marka === "LG") {
             lgCont.classList.remove('hidden'); rakipInp.classList.add('hidden');
-            urunler.forEach(u => {
+            data[currentSystem].urunler.forEach(u => {
                 let d = document.createElement('div');
                 d.className = 'dropdown-option'; d.innerText = u.model;
-                d.onclick = () => selectModel(u.model);
+                d.onclick = () => {
+                    selectedModel = u.model;
+                    document.getElementById('dropdown-display').innerHTML = u.model + " <span>▼</span>";
+                    document.getElementById('dropdown-menu').classList.remove('show');
+                    document.getElementById('f-fiyat').value = toNokta(u.fiyat);
+                };
                 optsDiv.appendChild(d);
             });
         } else {
@@ -634,66 +316,38 @@
 
     function kaydet() {
         let marka = document.getElementById('f-marka').value;
-        let modelAd = marka === "LG" ? selectedLGModel : "Rakip Cihaz"; 
-        let fiyat = parseInt(toSayi(document.getElementById('f-fiyat').value)) || 0;
+        let modelAd = marka === "LG" ? selectedModel : document.getElementById('f-model-rakip').value;
+        let birimFiyat = parseInt(toSayi(document.getElementById('f-fiyat').value)) || 0;
         let adet = parseInt(document.getElementById('f-adet').value) || 1;
         let not = document.getElementById('f-not').value;
         let id = document.getElementById('edit-sale-id').value;
 
-        if(!modelAd || modelAd === "Model Seçin..." || fiyat <= 0) return alert("Eksik bilgi!");
+        if(!modelAd || birimFiyat <= 0) return alert("Bilgileri kontrol edin!");
 
-        let primBirim = marka === "LG" ? (urunler.find(u => u.model === modelAd)?.prim || 0) : 0;
+        let primBirim = marka === "LG" ? (data[currentSystem].urunler.find(u => u.model === modelAd)?.prim || 0) : 0;
+        let toplamFiyat = birimFiyat * adet;
+        let toplamPrim = primBirim * adet;
 
         if(id) {
-            let i = satislar.findIndex(x => x.id == id);
-            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: primBirim * adet, not };
+            let i = data[currentSystem].satislar.findIndex(x => x.id == id);
+            data[currentSystem].satislar[i] = { ...data[currentSystem].satislar[i], marka, modelAd, fiyat: toplamFiyat, adet, prim: toplamPrim, not };
         } else {
-            satislar.push({ 
-                id: Date.now(), 
-                marka, 
-                modelAd, 
-                fiyat: fiyat * adet, 
-                adet, 
-                prim: primBirim * adet, 
-                not, 
-                tarih: new Date().toLocaleDateString('tr-TR') 
+            data[currentSystem].satislar.push({
+                id: Date.now(), marka, modelAd, fiyat: toplamFiyat, adet, prim: toplamPrim, not,
+                tarih: new Date().toLocaleDateString('tr-TR')
             });
         }
 
-        localStorage.setItem('lg_satislar', JSON.stringify(satislar));
+        saveToLocalStorage();
         satisFormSifirla(); 
-        updateHistoryMonths();
         render();
     }
 
-    function satisDuzenle(id) {
-        let s = satislar.find(x => x.id == id);
-        document.getElementById('edit-sale-id').value = s.id;
-        document.getElementById('f-marka').value = s.marka;
-        updateModelSelect();
-        if(s.marka === "LG") selectModel(s.modelAd);
-        document.getElementById('f-fiyat').value = toNokta(s.fiyat / s.adet);
-        document.getElementById('f-adet').value = s.adet;
-        document.getElementById('f-not').value = s.not || "";
-        document.getElementById('satis-form-title').innerText = "Kaydı Düzenle";
-        document.getElementById('btn-satis-vazgec').classList.remove('hidden');
-        window.scrollTo(0,0);
-    }
-
-    function sil(id) { if(confirm("Silinsin mi?")) { satislar = satislar.filter(x => x.id != id); localStorage.setItem('lg_satislar', JSON.stringify(satislar)); updateHistoryMonths(); render(); } }
-
     function render() {
-        let currentMonth = new Date().getMonth() + 1;
-        let currentYear = new Date().getFullYear();
-        
-        let currentSales = satislar.filter(s => {
-            const [d, m, y] = s.tarih.split('.');
-            return parseInt(m) === currentMonth && parseInt(y) === currentYear;
-        });
-
-        let lg = currentSales.filter(x => x.marka === "LG").reduce((a,b) => a + b.fiyat, 0);
-        let top = currentSales.reduce((a,b) => a + b.fiyat, 0);
-        let prim = currentSales.reduce((a,b) => a + b.prim, 0);
+        const currentData = data[currentSystem];
+        let lg = currentData.satislar.filter(x => x.marka === "LG").reduce((a,b) => a + b.fiyat, 0);
+        let top = currentData.satislar.reduce((a,b) => a + b.fiyat, 0);
+        let prim = currentData.satislar.reduce((a,b) => a + b.prim, 0);
         let pay = top > 0 ? (lg / top) * 100 : 0;
 
         document.getElementById('dash-top-ciro').innerText = toNokta(top) + " ₺";
@@ -701,155 +355,139 @@
         document.getElementById('dash-prim').innerText = toNokta(prim) + " ₺";
         document.getElementById('dash-pay').innerText = "%" + pay.toFixed(1);
 
-        let hedefSayi = parseInt(toSayi(hedef));
-        let hedefYuzde = (lg / hedefSayi) * 100;
+        let hedefYuzde = (lg / parseInt(toSayi(currentData.hedef))) * 100;
         document.getElementById('dash-goal-badge').innerText = "Hedef: %" + (isNaN(hedefYuzde) ? 0 : hedefYuzde.toFixed(1));
+        document.getElementById('cfg-hedef').value = toNokta(currentData.hedef);
 
-        document.getElementById('satis-listesi').innerHTML = satislar.slice().reverse().map(s => `
+        // Satış Listesi
+        document.getElementById('satis-listesi').innerHTML = currentData.satislar.slice().reverse().map(s => `
             <div class="sale-row">
                 <div class="sale-info">
                     <span class="model-name">${s.modelAd}</span>
                     <div class="brand-meta">
-                        <span class="brand-tag">${s.marka}</span>
-                        <span class="adet-badge">${s.adet} Adet</span>
-                        ${s.prim > 0 ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
+                        <span>${s.marka}</span> | <span>${s.adet} Adet</span> | 
+                        <span class="prim-badge">${toNokta(s.prim)} ₺ Prim</span>
                     </div>
-                    <span class="sale-date">${s.tarih} ${s.not ? '| ' + s.not : ''}</span>
                 </div>
-                <div class="sale-actions">
-                    <span class="sale-price">${toNokta(s.fiyat)} ₺</span>
+                <div class="sale-price-side">
+                    <div class="sale-price">${toNokta(s.fiyat)} ₺</div>
                     <div class="action-buttons">
-                        <button class="edit-btn" onclick="satisDuzenle(${s.id})">Düzenle</button>
-                        <button class="delete-btn" onclick="sil(${s.id})">Sil</button>
+                        <button onclick="satisDuzenle(${s.id})">⚙️</button>
+                        <button onclick="sil(${s.id})" style="color:red">🗑️</button>
                     </div>
                 </div>
             </div>
         `).join('');
 
-        document.getElementById('urun-listesi').innerHTML = urunler.map((u,i) => `
+        // Ürün Listesi
+        document.getElementById('urun-listesi').innerHTML = currentData.urunler.map((u,i) => `
             <div class="sale-row">
-                <div class="sale-info">
-                    <span class="model-name">${u.model}</span>
-                    <span class="brand-tag">Birim Prim: ${toNokta(u.prim)} ₺</span>
-                </div>
-                <div class="sale-actions">
-                    <span class="sale-price">${toNokta(u.fiyat)} ₺</span>
+                <div class="sale-info"><b>${u.model}</b><br><small>Prim: ${toNokta(u.prim)} ₺</small></div>
+                <div class="sale-price-side">
+                    <b>${toNokta(u.fiyat)} ₺</b>
                     <div class="action-buttons">
-                        <button class="edit-btn" onclick="urunDuzenle(${i})">Düzenle</button>
-                        <button class="delete-btn" onclick="urunSil(${i})">Sil</button>
+                        <button onclick="urunDuzenle(${i})">Düzenle</button>
+                        <button onclick="urunSil(${i})">Sil</button>
                     </div>
                 </div>
             </div>
         `).join('');
 
-        analiz(lg, top);
-        renderTopSellers();
+        analizGuncelle(lg, top);
     }
 
-    function updateHistoryMonths() {
-        let months = [...new Set(satislar.map(s => {
-            const [d, m, y] = s.tarih.split('.');
-            return `${m}/${y}`;
-        }))].sort().reverse();
-        
-        let select = document.getElementById('history-month-select');
-        select.innerHTML = '<option value="">-- Seçiniz --</option>' + 
-            months.map(m => `<option value="${m}">${m}</option>`).join('');
-    }
-
-    function renderHistory() {
-        let val = document.getElementById('history-month-select').value;
-        let content = document.getElementById('history-content');
-        let placeholder = document.getElementById('history-placeholder');
-
-        if(!val) {
-            content.classList.add('hidden');
-            placeholder.classList.remove('hidden');
-            return;
-        }
-
-        placeholder.classList.add('hidden');
-        content.classList.remove('hidden');
-
-        const [mSel, ySel] = val.split('/');
-        let f = satislar.filter(s => {
-            const [d, m, y] = s.tarih.split('.');
-            return m === mSel && y === ySel;
-        });
-
-        let lgSales = f.filter(x => x.marka === "LG");
-        let lgTotal = lgSales.reduce((a,b) => a + b.fiyat, 0);
-        let topTotal = f.reduce((a,b) => a + b.fiyat, 0);
-        let primTotal = f.reduce((a,b) => a + b.prim, 0);
-        let pay = topTotal > 0 ? (lgTotal / topTotal) * 100 : 0;
-
-        document.getElementById('h-lg').innerText = toNokta(lgTotal) + " ₺";
-        document.getElementById('h-top').innerText = toNokta(topTotal) + " ₺";
-        document.getElementById('h-pay').innerText = "%" + pay.toFixed(1);
-        document.getElementById('h-prim').innerText = toNokta(primTotal) + " ₺";
-
-        document.getElementById('history-lg-list').innerHTML = lgSales.slice().reverse().map(s => `
-            <div class="sale-row" style="border-color: #ffeef2; background-color: #fffcfd;">
-                <div class="sale-info">
-                    <span class="model-name">${s.modelAd}</span>
-                    <div class="brand-meta">
-                        <span class="brand-tag">LG</span>
-                        <span class="adet-badge">${s.adet} Adet</span>
-                        ${s.prim > 0 ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
-                    </div>
-                    <span class="sale-date">${s.tarih} ${s.not ? '| ' + s.not : ''}</span>
-                </div>
-                <div class="sale-actions">
-                    <span class="sale-price" style="color: var(--lg-red);">${toNokta(s.fiyat)} ₺</span>
-                </div>
-            </div>
-        `).join('') || '<p style="text-align:center; color:#999; font-size:0.85rem;">Bu ay LG satışı bulunamadı.</p>';
-    }
-
-    function renderTopSellers() {
-        const days = parseInt(document.getElementById('filter-days').value) || 7;
-        const now = new Date();
-        let filtered = satislar.filter(s => {
-            if(days === 999) return true;
-            const [d, m, y] = s.tarih.split('.');
-            const sDate = new Date(y, m - 1, d);
-            const diff = (now - sDate) / (1000 * 60 * 60 * 24);
-            return diff <= days;
-        });
-        let counts = {};
-        filtered.forEach(s => { if(s.marka === "LG") counts[s.modelAd] = (counts[s.modelAd] || 0) + s.adet; });
-        let sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
-        let html = sorted.length > 0 ? sorted.map(([m, a]) => `
-            <div class="top-seller-item">
-                <span>${m}</span>
-                <span class="top-seller-count">${a} Adet</span>
-            </div>
-        `).join('') : '<p style="color:#999; font-size:0.85rem; text-align:center;">Veri bulunamadı.</p>';
-        document.getElementById('top-selling-list').innerHTML = html;
-    }
-
-    function analiz(lg, top) {
+    function analizGuncelle(lg, top) {
         let gun = new Date().getDate();
         let aySonu = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
         let avg = lg / gun;
         let est = avg * aySonu;
-        let perc = (lg / parseInt(toSayi(hedef))) * 100;
-
+        
         document.getElementById('proj-avg').innerText = toNokta(Math.round(avg)) + " ₺";
         document.getElementById('proj-est').innerText = toNokta(Math.round(est)) + " ₺";
-        document.getElementById('proj-perc').innerText = "%" + (isNaN(perc) ? 0 : perc.toFixed(1));
 
         let goalBox = document.getElementById('market-goal-result');
+        let oran = currentSystem === 'TV' ? 0.30 : 0.50; // TV için %30, SB için %50 pazar payı hedefi
+        let hedefYuzdeStr = currentSystem === 'TV' ? '%30' : '%50';
+
         if(top > 0) {
             let currentPay = lg / top;
-            if(currentPay < 0.30) {
-                let fark = (0.30 * top - lg) / 0.70;
-                goalBox.innerHTML = `🎯 %30 Pazar Payı için <b>${toNokta(Math.ceil(fark))} ₺</b> daha LG satmalısın.`;
+            if(currentPay < oran) {
+                let fark = (oran * top - lg) / (1 - oran);
+                goalBox.innerHTML = `🎯 ${hedefYuzdeStr} Pazar Payı için <b>${toNokta(Math.ceil(fark))} ₺</b> daha LG satmalısın.`;
             } else {
-                goalBox.innerHTML = `✅ Tebrikler! Pazar payın %${(currentPay*100).toFixed(1)} ile hedefin üzerinde.`;
+                goalBox.innerHTML = `✅ Pazar payın ${hedefYuzdeStr} hedefinin üzerinde! (%${(currentPay*100).toFixed(1)})`;
             }
         }
+
+        const ctx = document.getElementById('payChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: ['LG', 'Rakip'], datasets: [{ data: [lg, top - lg], backgroundColor: ['#a50034', '#ddd'] }] },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
     }
+
+    // Helper Functions
+    function saveToLocalStorage() {
+        if(currentSystem === 'TV') {
+            localStorage.setItem('lg_satislar', JSON.stringify(data.TV.satislar));
+            localStorage.setItem('lg_urunler', JSON.stringify(data.TV.urunler));
+            localStorage.setItem('lg_hedef', data.TV.hedef);
+        } else {
+            localStorage.setItem('lg_satislar_sb', JSON.stringify(data.SB.satislar));
+            localStorage.setItem('lg_urunler_sb', JSON.stringify(data.SB.urunler));
+            localStorage.setItem('lg_hedef_sb', data.SB.hedef);
+        }
+    }
+
+    function satisDuzenle(id) {
+        let s = data[currentSystem].satislar.find(x => x.id == id);
+        document.getElementById('edit-sale-id').value = s.id;
+        document.getElementById('f-marka').value = s.marka;
+        updateModelSelect();
+        if(s.marka === "LG") {
+            selectedModel = s.modelAd;
+            document.getElementById('dropdown-display').innerHTML = s.modelAd + " <span>▼</span>";
+        } else {
+            document.getElementById('f-model-rakip').value = s.modelAd;
+        }
+        document.getElementById('f-fiyat').value = toNokta(s.fiyat / s.adet);
+        document.getElementById('f-adet').value = s.adet;
+        document.getElementById('f-not').value = s.not || "";
+        document.getElementById('btn-satis-vazgec').classList.remove('hidden');
+        showTab('satis');
+        window.scrollTo(0,0);
+    }
+
+    function sil(id) { if(confirm("Silinsin mi?")) { data[currentSystem].satislar = data[currentSystem].satislar.filter(x => x.id != id); saveToLocalStorage(); render(); } }
+
+    function urunEkle() {
+        let model = document.getElementById('m-ad').value;
+        let fiyat = parseInt(toSayi(document.getElementById('m-fiyat').value)) || 0;
+        let prim = parseInt(toSayi(document.getElementById('m-prim').value)) || 0;
+        let index = document.getElementById('edit-urun-index').value;
+        
+        if(!model || fiyat <= 0) return alert("Eksik bilgi!");
+        
+        if(index !== "") data[currentSystem].urunler[index] = {model, fiyat, prim};
+        else data[currentSystem].urunler.push({model, fiyat, prim});
+        
+        saveToLocalStorage(); urunFormSifirla(); updateModelSelect(); render();
+    }
+
+    function urunDuzenle(i) {
+        let u = data[currentSystem].urunler[i];
+        document.getElementById('edit-urun-index').value = i;
+        document.getElementById('m-ad').value = u.model;
+        document.getElementById('m-fiyat').value = toNokta(u.fiyat);
+        document.getElementById('m-prim').value = toNokta(u.prim);
+        document.getElementById('btn-urun-vazgec').classList.remove('hidden');
+        window.scrollTo(0,0);
+    }
+
+    function urunSil(i) { if(confirm("Ürün silinsin mi?")) { data[currentSystem].urunler.splice(i,1); saveToLocalStorage(); updateModelSelect(); render(); } }
+    function hedefGuncelle() { data[currentSystem].hedef = toSayi(document.getElementById('cfg-hedef').value); saveToLocalStorage(); render(); alert("Hedef Güncellendi"); }
 
     function showTab(t) {
         ['satis', 'ayarlar', 'analiz'].forEach(x => {
@@ -858,7 +496,6 @@
         });
         document.getElementById(t + '-section').classList.remove('hidden');
         document.getElementById('tab-btn-' + t).classList.add('active');
-        if(t === 'analiz') render();
     }
 
     function satisFormSifirla() {
@@ -866,34 +503,9 @@
         document.getElementById('f-fiyat').value = "";
         document.getElementById('f-adet').value = "1";
         document.getElementById('f-not').value = "";
-        selectedLGModel = "";
+        selectedModel = "";
         document.getElementById('dropdown-display').innerHTML = "Model Seçin... <span>▼</span>";
         document.getElementById('btn-satis-vazgec').classList.add('hidden');
-        document.getElementById('satis-form-title').innerText = "Yeni Satış Kaydı";
-    }
-
-    function urunEkle() {
-        let model = document.getElementById('m-ad').value;
-        let fiyat = toSayi(document.getElementById('m-fiyat').value);
-        let prim = toSayi(document.getElementById('m-prim').value);
-        let index = document.getElementById('edit-urun-index').value;
-        if(!model || !fiyat) return alert("Eksik bilgi!");
-        if(index !== "") urunler[index] = {model, fiyat: parseInt(fiyat), prim: parseInt(prim) || 0};
-        else urunler.push({model, fiyat: parseInt(fiyat), prim: parseInt(prim) || 0});
-        localStorage.setItem('lg_urunler', JSON.stringify(urunler));
-        urunFormSifirla(); updateModelSelect(); render();
-    }
-
-    function urunDuzenle(i) {
-        let u = urunler[i];
-        document.getElementById('edit-urun-index').value = i;
-        document.getElementById('m-ad').value = u.model;
-        document.getElementById('m-fiyat').value = toNokta(u.fiyat);
-        document.getElementById('m-prim').value = u.prim ? toNokta(u.prim) : "";
-        document.getElementById('urun-form-title').innerText = "Ürünü Güncelle";
-        document.getElementById('btn-urun-ekle').innerText = "GÜNCELLE";
-        document.getElementById('btn-urun-vazgec').classList.remove('hidden');
-        window.scrollTo(0,0);
     }
 
     function urunFormSifirla() {
@@ -901,15 +513,16 @@
         document.getElementById('m-ad').value = "";
         document.getElementById('m-fiyat').value = "";
         document.getElementById('m-prim').value = "";
-        document.getElementById('urun-form-title').innerText = "Ürün Tanımla";
-        document.getElementById('btn-urun-ekle').innerText = "Ekle";
         document.getElementById('btn-urun-vazgec').classList.add('hidden');
     }
 
-    function urunSil(i) { if(confirm("Ürün silinsin mi?")) { urunler.splice(i,1); localStorage.setItem('lg_urunler', JSON.stringify(urunler)); updateModelSelect(); render(); } }
-    function hedefGuncelle() { hedef = toSayi(document.getElementById('cfg-hedef').value); localStorage.setItem('lg_hedef', hedef); render(); alert("Güncellendi"); }
+    function filterModels(val) {
+        let opts = document.getElementsByClassName("dropdown-option");
+        for (let opt of opts) opt.style.display = opt.innerText.toLowerCase().includes(val.toLowerCase()) ? "" : "none";
+    }
 
-    init();
+    // İlk Çalıştırma
+    switchSystem('TV');
 </script>
 </body>
 </html>
