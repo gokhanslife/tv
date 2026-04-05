@@ -479,7 +479,21 @@
                 <button id="btn-satis-vazgec" class="btn-vazgec hidden" onclick="satisFormSifirla()">Vazgeç</button>
             </div>
             <div class="card">
-                <h3>Son İşlemler</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin:0">Son İşlemler</h3>
+                        <select id="filter-last-sales" onchange="handleFilterChange()" style="width: auto; margin-top: 0; padding: 8px 12px; font-size: 0.8rem; border-radius: 10px;">
+                            <option value="3" selected>Son 3 Gün</option>
+                            <option value="7">Son 7 Gün</option>
+                            <option value="30">Son 30 Gün</option>
+                            <option value="date">Takvimden Seç...</option>
+                            <option value="999">Tüm Zamanlar</option>
+                        </select>
+                    </div>
+                    <div id="custom-date-picker" class="hidden">
+                        <input type="date" id="filter-specific-date" onchange="render()" style="margin-top: 0; padding: 8px 12px; font-size: 0.9rem;">
+                    </div>
+                </div>
                 <div id="satis-listesi"></div>
             </div>
         </div>
@@ -682,6 +696,17 @@
 
     function sil(id) { if(confirm("Silinsin mi?")) { satislar = satislar.filter(x => x.id != id); localStorage.setItem('lg_satislar', JSON.stringify(satislar)); updateHistoryMonths(); render(); } }
 
+    function handleFilterChange() {
+        const filterVal = document.getElementById('filter-last-sales').value;
+        const datePickerDiv = document.getElementById('custom-date-picker');
+        if(filterVal === 'date') {
+            datePickerDiv.classList.remove('hidden');
+        } else {
+            datePickerDiv.classList.add('hidden');
+            render();
+        }
+    }
+
     function render() {
         let currentMonth = new Date().getMonth() + 1;
         let currentYear = new Date().getFullYear();
@@ -705,7 +730,30 @@
         let hedefYuzde = (lg / hedefSayi) * 100;
         document.getElementById('dash-goal-badge').innerText = "Hedef: %" + (isNaN(hedefYuzde) ? 0 : hedefYuzde.toFixed(1));
 
-        document.getElementById('satis-listesi').innerHTML = satislar.slice().reverse().map(s => `
+        // SON İŞLEMLER FİLTRELEME MANTIĞI
+        const filterType = document.getElementById('filter-last-sales').value;
+        const now = new Date();
+        now.setHours(0,0,0,0);
+
+        let filteredLastSales = satislar.slice().reverse().filter(s => {
+            const [d, m, y] = s.tarih.split('.');
+            const sDate = new Date(y, m - 1, d);
+
+            if(filterType === 'date') {
+                const specDate = document.getElementById('filter-specific-date').value; // yyyy-mm-dd
+                if(!specDate) return true;
+                const [sy, sm, sd] = specDate.split('-');
+                return parseInt(sd) === parseInt(d) && parseInt(sm) === parseInt(m) && parseInt(sy) === parseInt(y);
+            } else if(filterType === '999') {
+                return true;
+            } else {
+                const daysLimit = parseInt(filterType);
+                const diff = (now - sDate) / (1000 * 60 * 60 * 24);
+                return diff < daysLimit;
+            }
+        });
+
+        document.getElementById('satis-listesi').innerHTML = filteredLastSales.map(s => `
             <div class="sale-row">
                 <div class="sale-info">
                     <span class="model-name">${s.modelAd}</span>
@@ -724,7 +772,7 @@
                     </div>
                 </div>
             </div>
-        `).join('');
+        `).join('') || '<p style="text-align:center; color:#999; font-size:0.85rem; padding:20px;">Kayıt bulunamadı.</p>';
 
         document.getElementById('urun-listesi').innerHTML = urunler.map((u,i) => `
             <div class="sale-row">
