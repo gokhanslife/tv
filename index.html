@@ -591,6 +591,16 @@
                     <div id="history-lg-list"></div>
                 </div>
             </div>
+
+            <div class="card" style="border-top: 1px solid #eee; margin-top: 30px; background: #fafafa;">
+                <h3>Veri Yedekleme</h3>
+                <p style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">Satış verilerini ve ürün listesini cihazına yedekleyebilir veya başka telefona aktarabilirsin.</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button onclick="veriyiYedekle()" style="margin-top:0; background: #444; color: white; padding: 12px; font-size: 0.85rem;">YEDEĞİ İNDİR</button>
+                    <button onclick="document.getElementById('importFile').click()" style="margin-top:0; background: #eee; color: #444; padding: 12px; font-size: 0.85rem;">YEDEĞİ YÜKLE</button>
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="veriyiYukle(event)">
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -730,7 +740,6 @@
         let hedefYuzde = (lg / hedefSayi) * 100;
         document.getElementById('dash-goal-badge').innerText = "Hedef: %" + (isNaN(hedefYuzde) ? 0 : hedefYuzde.toFixed(1));
 
-        // SON İŞLEMLER FİLTRELEME MANTIĞI
         const filterType = document.getElementById('filter-last-sales').value;
         const now = new Date();
         now.setHours(0,0,0,0);
@@ -740,7 +749,7 @@
             const sDate = new Date(y, m - 1, d);
 
             if(filterType === 'date') {
-                const specDate = document.getElementById('filter-specific-date').value; // yyyy-mm-dd
+                const specDate = document.getElementById('filter-specific-date').value;
                 if(!specDate) return true;
                 const [sy, sm, sd] = specDate.split('-');
                 return parseInt(sd) === parseInt(d) && parseInt(sm) === parseInt(m) && parseInt(sy) === parseInt(y);
@@ -956,6 +965,45 @@
 
     function urunSil(i) { if(confirm("Ürün silinsin mi?")) { urunler.splice(i,1); localStorage.setItem('lg_urunler', JSON.stringify(urunler)); updateModelSelect(); render(); } }
     function hedefGuncelle() { hedef = toSayi(document.getElementById('cfg-hedef').value); localStorage.setItem('lg_hedef', hedef); render(); alert("Güncellendi"); }
+
+    // KRAL YEDEKLEME FONKSİYONLARI BURADA
+    function veriyiYedekle() {
+        const data = {
+            satislar: satislar,
+            urunler: urunler,
+            hedef: hedef,
+            yedekTarihi: new Date().toLocaleDateString('tr-TR')
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `LG_Sales_Backup_${new Date().toLocaleDateString('tr-TR')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function veriyiYukle(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (confirm("Mevcut tüm veriler silinecek ve yedek yüklenecek. Onaylıyor musun?")) {
+                    localStorage.setItem('lg_satislar', JSON.stringify(importedData.satislar || []));
+                    localStorage.setItem('lg_urunler', JSON.stringify(importedData.urunler || []));
+                    localStorage.setItem('lg_hedef', importedData.hedef || "1000000");
+                    location.reload(); // Sayfayı yenileyerek verileri yükle
+                }
+            } catch (err) {
+                alert("Hatalı dosya formatı!");
+            }
+        };
+        reader.readAsText(file);
+    }
 
     init();
 </script>
