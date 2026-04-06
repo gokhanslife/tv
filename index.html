@@ -594,7 +594,7 @@
 
             <div class="card" style="border-top: 1px solid #eee; margin-top: 30px; background: #fafafa;">
                 <h3>Veri Yedekleme</h3>
-                <p style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">Satış verilerini ve ürün listesini cihazına yedekleyebilir veya başka telefona aktarabilirsin.</p>
+                <p style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">Satış verilerini cihazına yedekle veya paylaş. APK içinde de çalışır.</p>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <button onclick="veriyiYedekle()" style="margin-top:0; background: #444; color: white; padding: 12px; font-size: 0.85rem;">YEDEĞİ İNDİR</button>
                     <button onclick="document.getElementById('importFile').click()" style="margin-top:0; background: #eee; color: #444; padding: 12px; font-size: 0.85rem;">YEDEĞİ YÜKLE</button>
@@ -966,7 +966,7 @@
     function urunSil(i) { if(confirm("Ürün silinsin mi?")) { urunler.splice(i,1); localStorage.setItem('lg_urunler', JSON.stringify(urunler)); updateModelSelect(); render(); } }
     function hedefGuncelle() { hedef = toSayi(document.getElementById('cfg-hedef').value); localStorage.setItem('lg_hedef', hedef); render(); alert("Güncellendi"); }
 
-    // KRAL YEDEKLEME FONKSİYONLARI BURADA
+    // KRAL APK UYUMLU PAYLAŞIMLI YEDEKLEME
     function veriyiYedekle() {
         const data = {
             satislar: satislar,
@@ -974,15 +974,28 @@
             hedef: hedef,
             yedekTarihi: new Date().toLocaleDateString('tr-TR')
         };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const jsonString = JSON.stringify(data, null, 2);
+        const fileName = `LG_Sales_Backup_${new Date().toLocaleDateString('tr-TR')}.json`;
+
+        if (navigator.share) {
+            const file = new File([jsonString], fileName, { type: 'application/json' });
+            navigator.share({
+                files: [file],
+                title: 'LG Sales Pro Yedek',
+                text: 'Satış verilerimin yedeğidir.'
+            }).catch(() => klasikIndirme(jsonString, fileName));
+        } else {
+            klasikIndirme(jsonString, fileName);
+        }
+    }
+
+    function klasikIndirme(jsonString, fileName) {
+        const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `LG_Sales_Backup_${new Date().toLocaleDateString('tr-TR')}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
     }
 
     function veriyiYukle(event) {
@@ -996,11 +1009,9 @@
                     localStorage.setItem('lg_satislar', JSON.stringify(importedData.satislar || []));
                     localStorage.setItem('lg_urunler', JSON.stringify(importedData.urunler || []));
                     localStorage.setItem('lg_hedef', importedData.hedef || "1000000");
-                    location.reload(); // Sayfayı yenileyerek verileri yükle
+                    location.reload();
                 }
-            } catch (err) {
-                alert("Hatalı dosya formatı!");
-            }
+            } catch (err) { alert("Hatalı dosya formatı!"); }
         };
         reader.readAsText(file);
     }
