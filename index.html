@@ -594,7 +594,7 @@
 
             <div class="card" style="border-top: 1px solid #eee; margin-top: 30px; background: #fafafa;">
                 <h3>Veri Yedekleme</h3>
-                <p style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">Satış verilerini ve ürün listesini cihazına yedekleyebilir veya başka telefona aktarabilirsin.</p>
+                <p style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">Satış verilerini ve ürün listesini yedekleyip paylaşabilirsin.</p>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <button onclick="veriyiYedekle()" style="margin-top:0; background: #444; color: white; padding: 12px; font-size: 0.85rem;">YEDEĞİ PAYLAŞ / İNDİR</button>
                     <button onclick="document.getElementById('importFile').click()" style="margin-top:0; background: #eee; color: #444; padding: 12px; font-size: 0.85rem;">YEDEĞİ YÜKLE</button>
@@ -966,32 +966,19 @@
     function urunSil(i) { if(confirm("Ürün silinsin mi?")) { urunler.splice(i,1); localStorage.setItem('lg_urunler', JSON.stringify(urunler)); updateModelSelect(); render(); } }
     function hedefGuncelle() { hedef = toSayi(document.getElementById('cfg-hedef').value); localStorage.setItem('lg_hedef', hedef); render(); alert("Güncellendi"); }
 
-    // APK VE WEB UYUMLU GELİŞMİŞ YEDEKLEME FONKSİYONU
-    function veriyiYedekle() {
+    // APK'DA ÇALIŞACAK GARANTİLENMİŞ YEDEKLEME
+    async function veriyiYedekle() {
         const data = {
             satislar: satislar,
             urunler: urunler,
             hedef: hedef,
             yedekTarihi: new Date().toLocaleDateString('tr-TR')
         };
-        const fileName = `LG_Sales_Backup_${new Date().toLocaleDateString('tr-TR')}.json`;
+        const fileName = `LG_Sales_Backup_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.json`;
         const jsonString = JSON.stringify(data, null, 2);
-
-        // Eğer Android Webview üzerinden "Share" desteği varsa (modern telefonlar)
-        if (navigator.share) {
-            const file = new File([jsonString], fileName, { type: 'application/json' });
-            navigator.share({
-                files: [file],
-                title: 'LG Sales Pro Yedek',
-                text: 'Satış verilerimin yedeğidir.'
-            }).catch(() => downloadBackup(jsonString, fileName)); // Share başarısız olursa indirmeye zorla
-        } else {
-            downloadBackup(jsonString, fileName);
-        }
-    }
-
-    function downloadBackup(jsonString, fileName) {
         const blob = new Blob([jsonString], { type: 'application/json' });
+
+        // 1. ÖNCE İNDİRMEYİ TETİKLE (Garanti)
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -999,7 +986,20 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+
+        // 2. PAYLAŞIMI TETİKLE (APK desteği varsa)
+        if (navigator.share) {
+            try {
+                const file = new File([blob], fileName, { type: 'application/json' });
+                await navigator.share({
+                    files: [file],
+                    title: 'LG Sales Pro Yedek',
+                    text: 'Satış verilerimin yedeğidir.'
+                });
+            } catch (err) { console.log("Paylaşım kapalı, dosya indirildi."); }
+        }
+        
+        setTimeout(() => URL.revokeObjectURL(url), 100);
     }
 
     function veriyiYukle(event) {
@@ -1015,9 +1015,7 @@
                     localStorage.setItem('lg_hedef', importedData.hedef || "1000000");
                     location.reload(); 
                 }
-            } catch (err) {
-                alert("Hatalı dosya formatı!");
-            }
+            } catch (err) { alert("Hatalı dosya!"); }
         };
         reader.readAsText(file);
     }
