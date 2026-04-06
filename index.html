@@ -966,12 +966,14 @@
     function urunSil(i) { if(confirm("Ürün silinsin mi?")) { urunler.splice(i,1); localStorage.setItem('lg_urunler', JSON.stringify(urunler)); updateModelSelect(); render(); } }
     function hedefGuncelle() { hedef = toSayi(document.getElementById('cfg-hedef').value); localStorage.setItem('lg_hedef', hedef); render(); alert("Güncellendi"); }
 
-    // APK ZORLAMALI OTOMATIK ISIMLI YEDEKLEME
+    // OTOMATİK İSİMLENDİRMELİ VE APK UYUMLU YEDEKLEME
     async function veriyiYedekle() {
         const simdi = new Date();
         const gun = simdi.getDate().toString().padStart(2, '0');
         const ay = (simdi.getMonth() + 1).toString().padStart(2, '0');
         const yil = simdi.getFullYear();
+        
+        // Android'in (özellikle WebView) takılmaması için en temiz dosya isimlendirmesi
         const dosyaIsmi = `LG_Yedek_${yil}_${ay}_${gun}.json`;
 
         const data = {
@@ -982,32 +984,30 @@
         };
 
         const jsonString = JSON.stringify(data, null, 2);
-        
-        // --- APK İÇİN KRİTİK NOKTA: DATA URI ---
-        // WebView bazen Blob URL'yi isimsiz görür. Data URI içine ismi gömüyoruz.
-        const encodedData = encodeURIComponent(jsonString);
-        const dataUri = 'data:application/json;charset=utf-8,' + encodedData;
+        const blob = new Blob([jsonString], { type: 'application/json' });
 
-        // 1. İNDİRME TETİKLEME (Zorlamalı İsim)
+        // APK VE WEB İÇİN ÇİFT TETİKLEME (Otomatik isim zorlamalı)
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = dataUri;
-        a.setAttribute('download', dosyaIsmi);
+        a.href = url;
+        a.download = dosyaIsmi; // Dosya ismini tarayıcıya/apk'ya dikte ediyoruz
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
 
-        // 2. PAYLAŞIM TETİKLEME
+        // PAYLAŞIM SİSTEMİ (Android Share Sheet için dosya ismini tanımlıyoruz)
         if (navigator.share) {
             try {
-                const blob = new Blob([jsonString], { type: 'application/json' });
                 const file = new File([blob], dosyaIsmi, { type: 'application/json' });
                 await navigator.share({
                     files: [file],
                     title: 'LG Sales Pro Yedek',
                     text: `${gun}.${ay}.${yil} tarihli satış yedeği.`
                 });
-            } catch (err) { console.log("Paylaşım kapalı."); }
+            } catch (err) { console.log("Paylaşım iptal edildi veya desteklenmiyor."); }
         }
+        
+        setTimeout(() => URL.revokeObjectURL(url), 200);
     }
 
     function veriyiYukle(event) {
