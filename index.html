@@ -577,13 +577,25 @@
                 <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h3 style="margin:0">Son İşlemler</h3>
-                        <select id="filter-last-sales" onchange="handleFilterChange()" style="width: auto; margin-top: 0; padding: 8px 12px; font-size: 0.8rem; border-radius: 10px;">
-                            <option value="3" selected>Son 3 Gün</option>
-                            <option value="7">Son 7 Gün</option>
-                            <option value="30">Son 30 Gün</option>
-                            <option value="date">Takvimden Seç...</option>
-                            <option value="999">Tüm Zamanlar</option>
-                        </select>
+                        <div style="display: flex; gap: 5px;">
+                            <select id="filter-brand-sales" onchange="render()" style="width: auto; margin-top: 0; padding: 8px; font-size: 0.75rem; border-radius: 10px; border-color: #ddd;">
+                                <option value="HEPSİ">Tüm Markalar</option>
+                                <option value="LG">LG</option>
+                                <option value="Samsung">Samsung</option>
+                                <option value="Philips">Philips</option>
+                                <option value="Thomson">Thomson</option>
+                                <option value="TCL">TCL</option>
+                                <option value="PEAQ">PEAQ</option>
+                                <option value="Diğer">Diğer</option>
+                            </select>
+                            <select id="filter-last-sales" onchange="handleFilterChange()" style="width: auto; margin-top: 0; padding: 8px; font-size: 0.75rem; border-radius: 10px; border-color: #ddd;">
+                                <option value="3" selected>Son 3 Gün</option>
+                                <option value="7">Son 7 Gün</option>
+                                <option value="30">Son 30 Gün</option>
+                                <option value="date">Takvim...</option>
+                                <option value="999">Tümü</option>
+                            </select>
+                        </div>
                     </div>
                     <div id="custom-date-picker" class="hidden">
                         <input type="date" id="filter-specific-date" onchange="render()" style="margin-top: 0; padding: 8px 12px; font-size: 0.9rem;">
@@ -845,12 +857,16 @@
         document.getElementById('dash-goal-badge').innerText = "Hedef: %" + (isNaN(hedefYuzde) ? 0 : hedefYuzde.toFixed(1));
 
         const filterType = document.getElementById('filter-last-sales').value;
+        const brandFilter = document.getElementById('filter-brand-sales').value;
         const now = new Date();
         now.setHours(0,0,0,0);
 
         let filteredLastSales = satislar.slice().reverse().filter(s => {
             const [d, m, y] = s.tarih.split('.');
             const sDate = new Date(y, m - 1, d);
+
+            // Marka filtresi kontrolü
+            if (brandFilter !== "HEPSİ" && s.marka !== brandFilter) return false;
 
             if(filterType === 'date') {
                 const specDate = document.getElementById('filter-specific-date').value;
