@@ -538,6 +538,7 @@
                     <option value="LG">LG Electronics</option>
                     <option value="Samsung">Samsung</option>
                     <option value="Philips">Philips</option>
+                    <option value="Thomson">Thomson</option>
                     <option value="TCL">TCL</option>
                     <option value="PEAQ">PEAQ</option>
                     <option value="Diğer">Diğer Marka</option>
@@ -909,7 +910,7 @@
 
     // Marka dağılımını render eden ortak fonksiyon (Hem analiz hem geçmiş için)
     function renderBrandDistribution(salesArray, totalCiro, containerId) {
-        const brands = ["LG", "Samsung", "Philips", "TCL", "PEAQ", "Diğer"];
+        const brands = ["LG", "Samsung", "Philips", "Thomson", "TCL", "PEAQ", "Diğer"];
         let brandStats = {};
         brands.forEach(b => brandStats[b] = { ciro: 0, adet: 0 });
 
