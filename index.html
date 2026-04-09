@@ -20,6 +20,7 @@
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             --accent: #27ae60;
             --blue: #2980b9;
+            --warning: #f39c12;
         }
 
         body { 
@@ -154,6 +155,15 @@
             transition: var(--transition);
         }
 
+        /* Pazar Payı Uyarı Rengi */
+        .stat-card-sm.warning-bg {
+            background: #fffcf0;
+            border: 1px solid rgba(243, 156, 18, 0.3);
+        }
+        .stat-card-sm.warning-bg .stat-value {
+            color: var(--warning);
+        }
+
         .stat-card-sm .stat-label { font-size: 0.7rem; color: var(--text-sub); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; display: block; margin-bottom: 8px;}
         .stat-card-sm .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--lg-red); letter-spacing: -0.02em;}
 
@@ -194,6 +204,22 @@
             box-shadow: var(--shadow-sm); 
             border: 1px solid rgba(0,0,0,0.03);
         }
+
+        /* Motivasyon Kartı Stili */
+        .motivation-card {
+            background: #222;
+            color: white;
+            padding: 15px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: var(--shadow-md);
+            border-left: 5px solid var(--lg-red);
+        }
+        .motivation-icon { font-size: 1.5rem; }
+        .motivation-text { font-size: 0.85rem; font-weight: 500; line-height: 1.4; }
 
         .card h3 { 
             font-size: 1.2rem; 
@@ -377,7 +403,6 @@
 
         .hidden { display: none !important; }
 
-        /* YAKISIKLI MARKET DAGILIM STILI */
         .brand-distribution-grid {
             display: grid;
             gap: 12px;
@@ -514,7 +539,7 @@
                 <span class="stat-label">Toplam Prim</span>
                 <div id="dash-prim" class="stat-value">0 ₺</div>
             </div>
-            <div class="stat-card-sm">
+            <div id="dash-pay-card" class="stat-card-sm">
                 <span class="stat-label">Pazar Payı</span>
                 <div id="dash-pay" class="stat-value">%0</div>
             </div>
@@ -638,6 +663,11 @@
         </div>
 
         <div id="analiz-section" class="hidden">
+            <div id="motivation-box" class="motivation-card">
+                <div class="motivation-icon" id="motivation-icon">🚀</div>
+                <div class="motivation-text" id="motivation-text">Satış verilerini girerek performansını takip etmeye başla!</div>
+            </div>
+
             <div class="card projection-card">
                 <h3>Ay Sonu Tahmini</h3>
                 <div id="proj-data">
@@ -853,6 +883,14 @@
         document.getElementById('dash-prim').innerText = toNokta(prim) + " ₺";
         document.getElementById('dash-pay').innerText = "%" + pay.toFixed(1);
 
+        // Pazar Payı Uyarı Rengi (%25 Altı Uyarı)
+        let payCard = document.getElementById('dash-pay-card');
+        if (top > 0 && pay < 25) {
+            payCard.classList.add('warning-bg');
+        } else {
+            payCard.classList.remove('warning-bg');
+        }
+
         let hedefSayi = parseInt(toSayi(hedef));
         let hedefYuzde = (lg / hedefSayi) * 100;
         document.getElementById('dash-goal-badge').innerText = "Hedef: %" + (isNaN(hedefYuzde) ? 0 : hedefYuzde.toFixed(1));
@@ -924,6 +962,37 @@
         analiz(lg, top);
         renderTopSellers();
         renderBrandDistribution(currentSales, top, 'brand-distribution-list');
+        updateMotivation(currentSales, lg, top);
+    }
+
+    // Motivasyon Mesajı Güncelleme
+    function updateMotivation(currentSales, lgCiro, totalCiro) {
+        const todayStr = new Date().toLocaleDateString('tr-TR');
+        const todaySales = currentSales.filter(s => s.tarih === todayStr);
+        const lgToday = todaySales.filter(s => s.marka === "LG").reduce((a,b) => a + b.fiyat, 0);
+        const currentPay = totalCiro > 0 ? (lgCiro / totalCiro) * 100 : 0;
+        
+        let icon = "🚀";
+        let text = "Bugün henüz LG satışı girilmedi. Hadi reyonun kralı kim göster!";
+
+        // ÖNCELİK 1: %25 ALTI KRİTİK SEVİYE
+        if (totalCiro > 0 && currentPay < 25) {
+            icon = "⚡";
+            text = "Pazar payı %25'in altında. Rakip markalara geçit verme, bir LG patlat!";
+        } 
+        // ÖNCELİK 2: %35 ÜSTÜ KRAL MODU
+        else if (currentPay >= 35) {
+            icon = "🏆";
+            text = `Pazar Payın %${currentPay.toFixed(1)}! Reyonu resmen domine ediyorsun kral!`;
+        } 
+        // ÖNCELİK 3: BUGÜNKÜ SATIŞ TEBRİĞİ (Sadece Pay %25 üzerindeyse buraya düşer)
+        else if (lgToday > 0) {
+            icon = "🔥";
+            text = `Harikasın! Bugün ${toNokta(lgToday)} ₺ değerinde LG satışı yaptın. Durmak yok!`;
+        }
+
+        document.getElementById('motivation-icon').innerText = icon;
+        document.getElementById('motivation-text').innerText = text;
     }
 
     function renderBrandDistribution(salesArray, totalCiro, containerId) {
