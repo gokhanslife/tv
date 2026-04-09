@@ -377,6 +377,96 @@
 
         .hidden { display: none !important; }
 
+        /* YAKISIKLI MARKET DAGILIM STILI */
+        .brand-distribution-grid {
+            display: grid;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .brand-dist-card {
+            background: #fff;
+            border: 1px solid #f0f0f0;
+            border-radius: 14px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: var(--transition);
+        }
+
+        .brand-dist-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .brand-dist-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand-initial {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: var(--premium-gray);
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .brand-dist-card.is-lg .brand-initial {
+            background: #ffeef2;
+            color: var(--lg-red);
+        }
+
+        .brand-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #222;
+        }
+
+        .brand-meta-small {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .brand-stats-right {
+            text-align: right;
+        }
+
+        .brand-ciro-val {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #222;
+            display: block;
+        }
+
+        .brand-share-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: #f1f3f5;
+            color: #444;
+            margin-top: 4px;
+        }
+
+        .is-lg .brand-ciro-val { color: var(--lg-red); }
+        .is-lg .brand-share-badge { background: var(--lg-red); color: white; }
+
         .top-seller-item {
             display: flex;
             justify-content: space-between;
@@ -446,7 +536,11 @@
                 <label>Reyon Markası</label>
                 <select id="f-marka" onchange="updateModelSelect()">
                     <option value="LG">LG Electronics</option>
-                    <option value="Rakip">Rakip Marka</option>
+                    <option value="Samsung">Samsung</option>
+                    <option value="Philips">Philips</option>
+                    <option value="TCL">TCL</option>
+                    <option value="PEAQ">PEAQ</option>
+                    <option value="Diğer">Diğer Marka</option>
                 </select>
                 
                 <label>Televizyon Modeli</label>
@@ -587,9 +681,17 @@
                         </div>
                     </div>
                     
+                    <h4 style="margin: 20px 0 15px 5px; color: #222; font-size: 1rem; border-left: 3px solid var(--blue); padding-left: 10px;">O Ayki Marka Dağılımı</h4>
+                    <div id="history-brand-list" class="brand-distribution-grid" style="margin-bottom: 25px;"></div>
+
                     <h4 style="margin: 20px 0 15px 5px; color: #222; font-size: 1rem; border-left: 3px solid var(--lg-red); padding-left: 10px;">O Ay Satılan LG Modelleri</h4>
                     <div id="history-lg-list"></div>
                 </div>
+            </div>
+
+            <div class="card">
+                <h3>Marka Bazlı Pazar Dağılımı</h3>
+                <div id="brand-distribution-list" class="brand-distribution-grid"></div>
             </div>
 
             <div class="card" style="border-top: 1px solid #eee; margin-top: 30px; background: #fafafa;">
@@ -653,12 +755,13 @@
             });
         } else {
             lgCont.classList.add('hidden'); rakipInp.classList.remove('hidden');
+            rakipInp.value = marka + " Cihaz";
         }
     }
 
     function kaydet() {
         let marka = document.getElementById('f-marka').value;
-        let modelAd = marka === "LG" ? selectedLGModel : "Rakip Cihaz"; 
+        let modelAd = marka === "LG" ? selectedLGModel : marka + " Cihaz"; 
         let fiyat = parseInt(toSayi(document.getElementById('f-fiyat').value)) || 0;
         let adet = parseInt(document.getElementById('f-adet').value) || 1;
         let not = document.getElementById('f-not').value;
@@ -801,6 +904,45 @@
 
         analiz(lg, top);
         renderTopSellers();
+        renderBrandDistribution(currentSales, top, 'brand-distribution-list');
+    }
+
+    // Marka dağılımını render eden ortak fonksiyon (Hem analiz hem geçmiş için)
+    function renderBrandDistribution(salesArray, totalCiro, containerId) {
+        const brands = ["LG", "Samsung", "Philips", "TCL", "PEAQ", "Diğer"];
+        let brandStats = {};
+        brands.forEach(b => brandStats[b] = { ciro: 0, adet: 0 });
+
+        salesArray.forEach(s => {
+            let b = brands.includes(s.marka) ? s.marka : "Diğer";
+            brandStats[b].ciro += s.fiyat;
+            brandStats[b].adet += s.adet;
+        });
+
+        let html = Object.entries(brandStats)
+            .sort((a, b) => b[1].ciro - a[1].ciro)
+            .map(([brand, data]) => {
+                let share = totalCiro > 0 ? (data.ciro / totalCiro) * 100 : 0;
+                if(data.ciro === 0) return "";
+                
+                const isLG = brand === 'LG';
+                return `
+                <div class="brand-dist-card ${isLG ? 'is-lg' : ''}">
+                    <div class="brand-dist-info">
+                        <div class="brand-initial">${brand[0]}</div>
+                        <div class="brand-details">
+                            <span class="brand-name">${brand}</span>
+                            <span class="brand-meta-small">${data.adet} Adet Satış</span>
+                        </div>
+                    </div>
+                    <div class="brand-stats-right">
+                        <span class="brand-ciro-val">${toNokta(data.ciro)} ₺</span>
+                        <span class="brand-share-badge">%${share.toFixed(1)} Pay</span>
+                    </div>
+                </div>`;
+            }).join('');
+
+        document.getElementById(containerId).innerHTML = html || '<p style="text-align:center; color:#999; font-size:0.85rem; padding: 10px;">Veri bulunamadı.</p>';
     }
 
     function updateHistoryMonths() {
@@ -844,6 +986,9 @@
         document.getElementById('h-top').innerText = toNokta(topTotal) + " ₺";
         document.getElementById('h-pay').innerText = "%" + pay.toFixed(1);
         document.getElementById('h-prim').innerText = toNokta(primTotal) + " ₺";
+
+        // Geçmiş Ay Marka Dağılımını Render Et
+        renderBrandDistribution(f, topTotal, 'history-brand-list');
 
         document.getElementById('history-lg-list').innerHTML = lgSales.slice().reverse().map(s => `
             <div class="sale-row" style="border-color: #ffeef2; background-color: #fffcfd;">
@@ -966,36 +1111,27 @@
     function urunSil(i) { if(confirm("Ürün silinsin mi?")) { urunler.splice(i,1); localStorage.setItem('lg_urunler', JSON.stringify(urunler)); updateModelSelect(); render(); } }
     function hedefGuncelle() { hedef = toSayi(document.getElementById('cfg-hedef').value); localStorage.setItem('lg_hedef', hedef); render(); alert("Güncellendi"); }
 
-    // OTOMATİK İSİMLENDİRMELİ VE APK UYUMLU YEDEKLEME
     async function veriyiYedekle() {
         const simdi = new Date();
         const gun = simdi.getDate().toString().padStart(2, '0');
         const ay = (simdi.getMonth() + 1).toString().padStart(2, '0');
         const yil = simdi.getFullYear();
-        
-        // Android'in (özellikle WebView) takılmaması için en temiz dosya isimlendirmesi
         const dosyaIsmi = `LG_Yedek_${yil}_${ay}_${gun}.json`;
-
         const data = {
             satislar: satislar,
             urunler: urunler,
             hedef: hedef,
             yedekTarihi: `${gun}.${ay}.${yil}`
         };
-
         const jsonString = JSON.stringify(data, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
-
-        // APK VE WEB İÇİN ÇİFT TETİKLEME (Otomatik isim zorlamalı)
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = dosyaIsmi; // Dosya ismini tarayıcıya/apk'ya dikte ediyoruz
+        a.download = dosyaIsmi;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-
-        // PAYLAŞIM SİSTEMİ (Android Share Sheet için dosya ismini tanımlıyoruz)
         if (navigator.share) {
             try {
                 const file = new File([blob], dosyaIsmi, { type: 'application/json' });
@@ -1004,9 +1140,8 @@
                     title: 'LG Sales Pro Yedek',
                     text: `${gun}.${ay}.${yil} tarihli satış yedeği.`
                 });
-            } catch (err) { console.log("Paylaşım iptal edildi veya desteklenmiyor."); }
+            } catch (err) { console.log("Paylaşım iptal edildi."); }
         }
-        
         setTimeout(() => URL.revokeObjectURL(url), 200);
     }
 
