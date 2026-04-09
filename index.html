@@ -591,7 +591,8 @@
                             <select id="filter-last-sales" onchange="handleFilterChange()" style="width: auto; margin-top: 0; padding: 8px; font-size: 0.75rem; border-radius: 10px; border-color: #ddd;">
                                 <option value="3" selected>Son 3 Gün</option>
                                 <option value="7">Son 7 Gün</option>
-                                <option value="30">Son 30 Gün</option>
+                                <option value="15">Son 15 Gün</option>
+                                <option value="this_month">Bu Ay</option>
                                 <option value="date">Takvim...</option>
                                 <option value="999">Tümü</option>
                             </select>
@@ -865,7 +866,6 @@
             const [d, m, y] = s.tarih.split('.');
             const sDate = new Date(y, m - 1, d);
 
-            // Marka filtresi kontrolü
             if (brandFilter !== "HEPSİ" && s.marka !== brandFilter) return false;
 
             if(filterType === 'date') {
@@ -873,6 +873,8 @@
                 if(!specDate) return true;
                 const [sy, sm, sd] = specDate.split('-');
                 return parseInt(sd) === parseInt(d) && parseInt(sm) === parseInt(m) && parseInt(sy) === parseInt(y);
+            } else if(filterType === 'this_month') {
+                return parseInt(m) === (now.getMonth() + 1) && parseInt(y) === now.getFullYear();
             } else if(filterType === '999') {
                 return true;
             } else {
@@ -924,7 +926,6 @@
         renderBrandDistribution(currentSales, top, 'brand-distribution-list');
     }
 
-    // Marka dağılımını render eden ortak fonksiyon (Hem analiz hem geçmiş için)
     function renderBrandDistribution(salesArray, totalCiro, containerId) {
         const brands = ["LG", "Samsung", "Philips", "Thomson", "TCL", "PEAQ", "Diğer"];
         let brandStats = {};
@@ -1004,7 +1005,6 @@
         document.getElementById('h-pay').innerText = "%" + pay.toFixed(1);
         document.getElementById('h-prim').innerText = toNokta(primTotal) + " ₺";
 
-        // Geçmiş Ay Marka Dağılımını Render Et
         renderBrandDistribution(f, topTotal, 'history-brand-list');
 
         document.getElementById('history-lg-list').innerHTML = lgSales.slice().reverse().map(s => `
