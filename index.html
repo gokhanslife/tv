@@ -1134,7 +1134,9 @@
                 let fark = (0.30 * top - lg) / 0.70;
                 goalBox.innerHTML = `🎯 %30 Pazar Payı için <b>${toNokta(Math.ceil(fark))} ₺</b> daha LG satmalısın.`;
             } else {
-                goalBox.innerHTML = `✅ Tebrikler! Pazar payın %${(currentPay*100).toFixed(1)} ile hedefin üzerinde.`;
+                let rakipRisk = (lg / 0.30) - top; 
+                goalBox.innerHTML = `✅ Tebrikler! Pazar payın %${(currentPay*100).toFixed(1)} ile hedefin üzerinde. <br>
+                <span style="font-size:0.85rem; color:#666; display:block; margin-top:5px;">⚠️ Dikkat: Yaklaşık <b>${toNokta(Math.ceil(rakipRisk))} ₺</b> değerinde daha rakip satışı olursa pazar payın %30'un altına düşer!</span>`;
             }
         }
     }
