@@ -155,7 +155,6 @@
             transition: var(--transition);
         }
 
-        /* Pazar Payı Uyarı Rengi */
         .stat-card-sm.warning-bg {
             background: #fffcf0;
             border: 1px solid rgba(243, 156, 18, 0.3);
@@ -205,7 +204,6 @@
             border: 1px solid rgba(0,0,0,0.03);
         }
 
-        /* Motivasyon Kartı Stili */
         .motivation-card {
             background: #222;
             color: white;
@@ -759,7 +757,13 @@
 
     function toNokta(val) { return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
     function toSayi(val) { return val.toString().replace(/\./g, ""); }
-    function formatInput(el) { let temiz = el.value.replace(/\D/g, ""); el.value = toNokta(temiz); }
+    
+    // Eksi işaretine izin verecek şekilde güncellendi
+    function formatInput(el) { 
+        let isNegative = el.value.startsWith('-');
+        let temiz = el.value.replace(/\D/g, ""); 
+        el.value = (isNegative ? '-' : '') + toNokta(temiz); 
+    }
 
     function init() {
         document.getElementById('cfg-hedef').value = toNokta(hedef);
@@ -806,14 +810,21 @@
     function kaydet() {
         let marka = document.getElementById('f-marka').value;
         let modelAd = marka === "LG" ? selectedLGModel : marka + " Cihaz"; 
-        let fiyat = parseInt(toSayi(document.getElementById('f-fiyat').value)) || 0;
+        
+        // Eksi değerleri koruyan sayı çevirme
+        let fiyatRaw = document.getElementById('f-fiyat').value.replace(/\./g, "");
+        let fiyat = parseInt(fiyatRaw) || 0;
+        
         let adet = parseInt(document.getElementById('f-adet').value) || 1;
         let not = document.getElementById('f-not').value;
         let id = document.getElementById('edit-sale-id').value;
 
-        if(!modelAd || modelAd === "Model Seçin..." || fiyat <= 0) return alert("Eksik bilgi!");
+        if(!modelAd || modelAd === "Model Seçin..." || fiyat === 0) return alert("Eksik bilgi!");
 
         let primBirim = marka === "LG" ? (urunler.find(u => u.model === modelAd)?.prim || 0) : 0;
+        
+        let simdi = new Date();
+        let tarihStr = simdi.toLocaleDateString('tr-TR');
 
         if(id) {
             let i = satislar.findIndex(x => x.id == id);
@@ -826,8 +837,8 @@
                 fiyat: fiyat * adet, 
                 adet, 
                 prim: primBirim * adet, 
-                not, 
-                tarih: new Date().toLocaleDateString('tr-TR') 
+                not: (fiyat < 0 ? "[İADE] " : "") + not,
+                tarih: tarihStr 
             });
         }
 
@@ -883,7 +894,6 @@
         document.getElementById('dash-prim').innerText = toNokta(prim) + " ₺";
         document.getElementById('dash-pay').innerText = "%" + pay.toFixed(1);
 
-        // Pazar Payı Uyarı Rengi (%25 Altı Uyarı)
         let payCard = document.getElementById('dash-pay-card');
         if (top > 0 && pay < 25) {
             payCard.classList.add('warning-bg');
@@ -965,7 +975,6 @@
         updateMotivation(currentSales, lg, top);
     }
 
-    // Motivasyon Mesajı Güncelleme
     function updateMotivation(currentSales, lgCiro, totalCiro) {
         const todayStr = new Date().toLocaleDateString('tr-TR');
         const todaySales = currentSales.filter(s => s.tarih === todayStr);
@@ -975,17 +984,14 @@
         let icon = "🚀";
         let text = "Bugün henüz LG satışı girilmedi. Hadi reyonun kralı kim göster!";
 
-        // ÖNCELİK 1: %25 ALTI KRİTİK SEVİYE
         if (totalCiro > 0 && currentPay < 25) {
             icon = "⚡";
             text = "Pazar payı %25'in altında. Rakip markalara geçit verme, bir LG patlat!";
         } 
-        // ÖNCELİK 2: %35 ÜSTÜ KRAL MODU
         else if (currentPay >= 35) {
             icon = "🏆";
             text = `Pazar Payın %${currentPay.toFixed(1)}! Reyonu resmen domine ediyorsun kral!`;
         } 
-        // ÖNCELİK 3: BUGÜNKÜ SATIŞ TEBRİĞİ (Sadece Pay %25 üzerindeyse buraya düşer)
         else if (lgToday > 0) {
             icon = "🔥";
             text = `Harikasın! Bugün ${toNokta(lgToday)} ₺ değerinde LG satışı yaptın. Durmak yok!`;
