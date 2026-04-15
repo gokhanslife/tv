@@ -815,7 +815,9 @@
         let marka = document.getElementById('f-marka').value;
         let modelAd = marka === "LG" ? selectedLGModel : marka + " Cihaz"; 
         
-        let fiyatRaw = document.getElementById('f-fiyat').value.replace(/\./g, "");
+        let fiyatInput = document.getElementById('f-fiyat').value;
+        let isIade = fiyatInput.startsWith('-');
+        let fiyatRaw = fiyatInput.replace(/\./g, "");
         let fiyat = parseInt(fiyatRaw) || 0;
         
         let adet = parseInt(document.getElementById('f-adet').value) || 1;
@@ -831,10 +833,13 @@
         if(!modelAd || modelAd === "Model Seçin..." || fiyat === 0) return alert("Eksik bilgi!");
 
         let primBirim = marka === "LG" ? (urunler.find(u => u.model === modelAd)?.prim || 0) : 0;
+        
+        // EĞER İADE İSE PRİMİ DE EKSİYE ÇEVİR
+        let toplamPrim = isIade ? (primBirim * Math.abs(adet) * -1) : (primBirim * adet);
 
         if(id) {
             let i = satislar.findIndex(x => x.id == id);
-            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: primBirim * adet, not, tarih: tarihStr };
+            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: toplamPrim, not, tarih: tarihStr };
         } else {
             satislar.push({ 
                 id: Date.now(), 
@@ -842,7 +847,7 @@
                 modelAd, 
                 fiyat: fiyat * adet, 
                 adet, 
-                prim: primBirim * adet, 
+                prim: toplamPrim, 
                 not: (fiyat < 0 ? "[İADE] " : "") + not,
                 tarih: tarihStr 
             });
@@ -950,7 +955,7 @@
                     <div class="brand-meta">
                         <span class="brand-tag">${s.marka}</span>
                         <span class="adet-badge">${s.adet} Adet</span>
-                        ${s.prim > 0 ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
+                        ${(s.prim != 0 && s.fiyat > 0) ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
                     </div>
                     <span class="sale-date">${s.tarih} ${s.not ? '| ' + s.not : ''}</span>
                 </div>
@@ -1096,11 +1101,11 @@
         document.getElementById('history-lg-list').innerHTML = lgSales.slice().reverse().map(s => `
             <div class="sale-row" style="border-color: #ffeef2; background-color: #fffcfd;">
                 <div class="sale-info">
-                    <span class="model-name">${s.modelAd}</span>
+                    <span class="model-name">${s.modelAd} ${s.fiyat < 0 ? '<small style="color:var(--lg-red)">(İADE)</small>' : ''}</span>
                     <div class="brand-meta">
                         <span class="brand-tag">LG</span>
                         <span class="adet-badge">${s.adet} Adet</span>
-                        ${s.prim > 0 ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
+                        ${(s.prim != 0 && s.fiyat > 0) ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
                     </div>
                     <span class="sale-date">${s.tarih} ${s.not ? '| ' + s.not : ''}</span>
                 </div>
