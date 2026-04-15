@@ -556,6 +556,9 @@
                 <h3 id="satis-form-title">Yeni Satış Kaydı</h3>
                 <input type="hidden" id="edit-sale-id">
                 
+                <label>Satış Tarihi</label>
+                <input type="date" id="f-tarih">
+
                 <label>Reyon Markası</label>
                 <select id="f-marka" onchange="updateModelSelect()">
                     <option value="LG">LG Electronics</option>
@@ -758,7 +761,6 @@
     function toNokta(val) { return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
     function toSayi(val) { return val.toString().replace(/\./g, ""); }
     
-    // Eksi işaretine izin verecek şekilde güncellendi
     function formatInput(el) { 
         let isNegative = el.value.startsWith('-');
         let temiz = el.value.replace(/\D/g, ""); 
@@ -767,6 +769,8 @@
 
     function init() {
         document.getElementById('cfg-hedef').value = toNokta(hedef);
+        // Form tarihini bugüne ayarla
+        document.getElementById('f-tarih').valueAsDate = new Date();
         updateModelSelect();
         updateHistoryMonths();
         render();
@@ -811,24 +815,26 @@
         let marka = document.getElementById('f-marka').value;
         let modelAd = marka === "LG" ? selectedLGModel : marka + " Cihaz"; 
         
-        // Eksi değerleri koruyan sayı çevirme
         let fiyatRaw = document.getElementById('f-fiyat').value.replace(/\./g, "");
         let fiyat = parseInt(fiyatRaw) || 0;
         
         let adet = parseInt(document.getElementById('f-adet').value) || 1;
         let not = document.getElementById('f-not').value;
         let id = document.getElementById('edit-sale-id').value;
+        
+        // Seçilen tarihi formatla (DD.MM.YYYY)
+        let fTarih = document.getElementById('f-tarih').value;
+        if(!fTarih) return alert("Lütfen tarih seçin!");
+        let [y, m, d] = fTarih.split('-');
+        let tarihStr = `${d}.${m}.${y}`;
 
         if(!modelAd || modelAd === "Model Seçin..." || fiyat === 0) return alert("Eksik bilgi!");
 
         let primBirim = marka === "LG" ? (urunler.find(u => u.model === modelAd)?.prim || 0) : 0;
-        
-        let simdi = new Date();
-        let tarihStr = simdi.toLocaleDateString('tr-TR');
 
         if(id) {
             let i = satislar.findIndex(x => x.id == id);
-            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: primBirim * adet, not };
+            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: primBirim * adet, not, tarih: tarihStr };
         } else {
             satislar.push({ 
                 id: Date.now(), 
@@ -851,6 +857,11 @@
     function satisDuzenle(id) {
         let s = satislar.find(x => x.id == id);
         document.getElementById('edit-sale-id').value = s.id;
+        
+        // Düzenleme sırasında tarihi input'a geri yükle
+        let [d, m, y] = s.tarih.split('.');
+        document.getElementById('f-tarih').value = `${y}-${m}-${d}`;
+
         document.getElementById('f-marka').value = s.marka;
         updateModelSelect();
         if(s.marka === "LG") selectModel(s.modelAd);
@@ -935,7 +946,7 @@
         document.getElementById('satis-listesi').innerHTML = filteredLastSales.map(s => `
             <div class="sale-row">
                 <div class="sale-info">
-                    <span class="model-name">${s.modelAd}</span>
+                    <span class="model-name">${s.modelAd} ${s.fiyat < 0 ? '<small style="color:var(--lg-red)">(İADE)</small>' : ''}</span>
                     <div class="brand-meta">
                         <span class="brand-tag">${s.marka}</span>
                         <span class="adet-badge">${s.adet} Adet</span>
@@ -1159,6 +1170,7 @@
 
     function satisFormSifirla() {
         document.getElementById('edit-sale-id').value = "";
+        document.getElementById('f-tarih').valueAsDate = new Date(); // Tarihi bugüne çek
         document.getElementById('f-fiyat').value = "";
         document.getElementById('f-adet').value = "1";
         document.getElementById('f-not').value = "";
