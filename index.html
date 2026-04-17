@@ -1025,14 +1025,19 @@
         salesArray.forEach(s => {
             let b = brands.includes(s.marka) ? s.marka : "Diğer";
             brandStats[b].ciro += s.fiyat;
-            brandStats[b].adet += s.adet;
+            // EĞER İADE İSE ADETTEN DÜŞ, DEĞİLSE EKLE
+            if (s.fiyat < 0) {
+                brandStats[b].adet -= Math.abs(s.adet);
+            } else {
+                brandStats[b].adet += s.adet;
+            }
         });
 
         let html = Object.entries(brandStats)
             .sort((a, b) => b[1].ciro - a[1].ciro)
             .map(([brand, data]) => {
                 let share = totalCiro > 0 ? (data.ciro / totalCiro) * 100 : 0;
-                if(data.ciro === 0) return "";
+                if(data.ciro === 0 && data.adet === 0) return "";
                 
                 const isLG = brand === 'LG';
                 return `
