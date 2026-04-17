@@ -507,6 +507,13 @@
             .main-ciro-card .stat-value { font-size: 2.2rem; }
             .sale-price { font-size: 1rem; }
         }
+
+        /* Saat Analiz Grafiği Konteyner */
+        .chart-container {
+            margin-top: 15px;
+            height: 250px;
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -556,8 +563,16 @@
                 <h3 id="satis-form-title">Yeni Satış Kaydı</h3>
                 <input type="hidden" id="edit-sale-id">
                 
-                <label>Satış Tarihi</label>
-                <input type="date" id="f-tarih">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>Satış Tarihi</label>
+                        <input type="date" id="f-tarih">
+                    </div>
+                    <div>
+                        <label>Satış Saati</label>
+                        <input type="time" id="f-saat">
+                    </div>
+                </div>
 
                 <label>Reyon Markası</label>
                 <select id="f-marka" onchange="updateModelSelect()">
@@ -692,6 +707,14 @@
             </div>
 
             <div class="card">
+                <h3>Satış Yoğunluk Analizi (Altın Saatler)</h3>
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+                <p style="font-size: 0.75rem; color: #888; margin-top: 15px; text-align: center;">Satışlarınızın gün içindeki saatlik dağılımını gösterir.</p>
+            </div>
+
+            <div class="card">
                 <h3>Geçmiş Ay Verileri</h3>
                 <label>Analiz edilecek ayı seçin</label>
                 <select id="history-month-select" onchange="renderHistory()">
@@ -757,6 +780,7 @@
     let urunler = JSON.parse(localStorage.getItem('lg_urunler')) || [];
     let hedef = localStorage.getItem('lg_hedef') || "1000000";
     let selectedLGModel = "";
+    let hourlyChart = null;
 
     function toNokta(val) { return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
     function toSayi(val) { return val.toString().replace(/\./g, ""); }
@@ -769,8 +793,11 @@
 
     function init() {
         document.getElementById('cfg-hedef').value = toNokta(hedef);
-        // Form tarihini bugüne ayarla
-        document.getElementById('f-tarih').valueAsDate = new Date();
+        // Form tarihini ve saatini ayarla
+        let simdi = new Date();
+        document.getElementById('f-tarih').valueAsDate = simdi;
+        document.getElementById('f-saat').value = simdi.getHours().toString().padStart(2, '0') + ":" + simdi.getMinutes().toString().padStart(2, '0');
+        
         updateModelSelect();
         updateHistoryMonths();
         render();
@@ -823,8 +850,8 @@
         let adet = parseInt(document.getElementById('f-adet').value) || 1;
         let not = document.getElementById('f-not').value;
         let id = document.getElementById('edit-sale-id').value;
+        let saat = document.getElementById('f-saat').value || "00:00";
         
-        // Seçilen tarihi formatla (DD.MM.YYYY)
         let fTarih = document.getElementById('f-tarih').value;
         if(!fTarih) return alert("Lütfen tarih seçin!");
         let [y, m, d] = fTarih.split('-');
@@ -833,13 +860,11 @@
         if(!modelAd || modelAd === "Model Seçin..." || fiyat === 0) return alert("Eksik bilgi!");
 
         let primBirim = marka === "LG" ? (urunler.find(u => u.model === modelAd)?.prim || 0) : 0;
-        
-        // EĞER İADE İSE PRİMİ DE EKSİYE ÇEVİR
         let toplamPrim = isIade ? (primBirim * Math.abs(adet) * -1) : (primBirim * adet);
 
         if(id) {
             let i = satislar.findIndex(x => x.id == id);
-            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: toplamPrim, not, tarih: tarihStr };
+            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: toplamPrim, not, tarih: tarihStr, saat };
         } else {
             satislar.push({ 
                 id: Date.now(), 
@@ -849,7 +874,8 @@
                 adet, 
                 prim: toplamPrim, 
                 not: (fiyat < 0 ? "[İADE] " : "") + not,
-                tarih: tarihStr 
+                tarih: tarihStr,
+                saat: saat
             });
         }
 
@@ -863,9 +889,9 @@
         let s = satislar.find(x => x.id == id);
         document.getElementById('edit-sale-id').value = s.id;
         
-        // Düzenleme sırasında tarihi input'a geri yükle
         let [d, m, y] = s.tarih.split('.');
         document.getElementById('f-tarih').value = `${y}-${m}-${d}`;
+        document.getElementById('f-saat').value = s.saat || "00:00";
 
         document.getElementById('f-marka').value = s.marka;
         updateModelSelect();
@@ -911,11 +937,8 @@
         document.getElementById('dash-pay').innerText = "%" + pay.toFixed(1);
 
         let payCard = document.getElementById('dash-pay-card');
-        if (top > 0 && pay < 25) {
-            payCard.classList.add('warning-bg');
-        } else {
-            payCard.classList.remove('warning-bg');
-        }
+        if (top > 0 && pay < 25) payCard.classList.add('warning-bg');
+        else payCard.classList.remove('warning-bg');
 
         let hedefSayi = parseInt(toSayi(hedef));
         let hedefYuzde = (lg / hedefSayi) * 100;
@@ -929,9 +952,7 @@
         let filteredLastSales = satislar.slice().reverse().filter(s => {
             const [d, m, y] = s.tarih.split('.');
             const sDate = new Date(y, m - 1, d);
-
             if (brandFilter !== "HEPSİ" && s.marka !== brandFilter) return false;
-
             if(filterType === 'date') {
                 const specDate = document.getElementById('filter-specific-date').value;
                 if(!specDate) return true;
@@ -939,9 +960,8 @@
                 return parseInt(sd) === parseInt(d) && parseInt(sm) === parseInt(m) && parseInt(sy) === parseInt(y);
             } else if(filterType === 'this_month') {
                 return parseInt(m) === (now.getMonth() + 1) && parseInt(y) === now.getFullYear();
-            } else if(filterType === '999') {
-                return true;
-            } else {
+            } else if(filterType === '999') return true;
+            else {
                 const daysLimit = parseInt(filterType);
                 const diff = (now - sDate) / (1000 * 60 * 60 * 24);
                 return diff < daysLimit;
@@ -957,7 +977,7 @@
                         <span class="adet-badge">${s.adet} Adet</span>
                         ${(s.prim != 0 && s.fiyat > 0) ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
                     </div>
-                    <span class="sale-date">${s.tarih} ${s.not ? '| ' + s.not : ''}</span>
+                    <span class="sale-date">${s.tarih} ${s.saat ? '| ' + s.saat : ''} ${s.not ? '| ' + s.not : ''}</span>
                 </div>
                 <div class="sale-actions">
                     <span class="sale-price">${toNokta(s.fiyat)} ₺</span>
@@ -989,6 +1009,47 @@
         renderTopSellers();
         renderBrandDistribution(currentSales, top, 'brand-distribution-list');
         updateMotivation(currentSales, lg, top);
+        renderHourlyChart(currentSales);
+    }
+
+    function renderHourlyChart(sales) {
+        let hourCounts = Array(24).fill(0);
+        sales.forEach(s => {
+            if(s.saat && s.fiyat > 0) {
+                let h = parseInt(s.saat.split(':')[0]);
+                hourCounts[h] += s.adet;
+            }
+        });
+
+        const ctx = document.getElementById('hourlyChart').getContext('2d');
+        
+        if (hourlyChart) hourlyChart.destroy();
+
+        hourlyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => i + ":00"),
+                datasets: [{
+                    label: 'Satış Adedi',
+                    data: hourCounts,
+                    backgroundColor: 'rgba(165, 0, 52, 0.7)',
+                    borderColor: 'rgba(165, 0, 52, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
     }
 
     function updateMotivation(currentSales, lgCiro, totalCiro) {
@@ -1025,12 +1086,8 @@
         salesArray.forEach(s => {
             let b = brands.includes(s.marka) ? s.marka : "Diğer";
             brandStats[b].ciro += s.fiyat;
-            // EĞER İADE İSE ADETTEN DÜŞ, DEĞİLSE EKLE
-            if (s.fiyat < 0) {
-                brandStats[b].adet -= Math.abs(s.adet);
-            } else {
-                brandStats[b].adet += s.adet;
-            }
+            if (s.fiyat < 0) brandStats[b].adet -= Math.abs(s.adet);
+            else brandStats[b].adet += s.adet;
         });
 
         let html = Object.entries(brandStats)
@@ -1038,7 +1095,6 @@
             .map(([brand, data]) => {
                 let share = totalCiro > 0 ? (data.ciro / totalCiro) * 100 : 0;
                 if(data.ciro === 0 && data.adet === 0) return "";
-                
                 const isLG = brand === 'LG';
                 return `
                 <div class="brand-dist-card ${isLG ? 'is-lg' : ''}">
@@ -1055,7 +1111,6 @@
                     </div>
                 </div>`;
             }).join('');
-
         document.getElementById(containerId).innerHTML = html || '<p style="text-align:center; color:#999; font-size:0.85rem; padding: 10px;">Veri bulunamadı.</p>';
     }
 
@@ -1064,45 +1119,28 @@
             const [d, m, y] = s.tarih.split('.');
             return `${m}/${y}`;
         }))].sort().reverse();
-        
         let select = document.getElementById('history-month-select');
-        select.innerHTML = '<option value="">-- Seçiniz --</option>' + 
-            months.map(m => `<option value="${m}">${m}</option>`).join('');
+        select.innerHTML = '<option value="">-- Seçiniz --</option>' + months.map(m => `<option value="${m}">${m}</option>`).join('');
     }
 
     function renderHistory() {
         let val = document.getElementById('history-month-select').value;
         let content = document.getElementById('history-content');
         let placeholder = document.getElementById('history-placeholder');
-
-        if(!val) {
-            content.classList.add('hidden');
-            placeholder.classList.remove('hidden');
-            return;
-        }
-
-        placeholder.classList.add('hidden');
-        content.classList.remove('hidden');
-
+        if(!val) { content.classList.add('hidden'); placeholder.classList.remove('hidden'); return; }
+        placeholder.classList.add('hidden'); content.classList.remove('hidden');
         const [mSel, ySel] = val.split('/');
-        let f = satislar.filter(s => {
-            const [d, m, y] = s.tarih.split('.');
-            return m === mSel && y === ySel;
-        });
-
+        let f = satislar.filter(s => { const [d, m, y] = s.tarih.split('.'); return m === mSel && y === ySel; });
         let lgSales = f.filter(x => x.marka === "LG");
         let lgTotal = lgSales.reduce((a,b) => a + b.fiyat, 0);
         let topTotal = f.reduce((a,b) => a + b.fiyat, 0);
         let primTotal = f.reduce((a,b) => a + b.prim, 0);
         let pay = topTotal > 0 ? (lgTotal / topTotal) * 100 : 0;
-
         document.getElementById('h-lg').innerText = toNokta(lgTotal) + " ₺";
         document.getElementById('h-top').innerText = toNokta(topTotal) + " ₺";
         document.getElementById('h-pay').innerText = "%" + pay.toFixed(1);
         document.getElementById('h-prim').innerText = toNokta(primTotal) + " ₺";
-
         renderBrandDistribution(f, topTotal, 'history-brand-list');
-
         document.getElementById('history-lg-list').innerHTML = lgSales.slice().reverse().map(s => `
             <div class="sale-row" style="border-color: #ffeef2; background-color: #fffcfd;">
                 <div class="sale-info">
@@ -1112,11 +1150,9 @@
                         <span class="adet-badge">${s.adet} Adet</span>
                         ${(s.prim != 0 && s.fiyat > 0) ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
                     </div>
-                    <span class="sale-date">${s.tarih} ${s.not ? '| ' + s.not : ''}</span>
+                    <span class="sale-date">${s.tarih} ${s.saat ? '| ' + s.saat : ''}</span>
                 </div>
-                <div class="sale-actions">
-                    <span class="sale-price" style="color: var(--lg-red);">${toNokta(s.fiyat)} ₺</span>
-                </div>
+                <div class="sale-actions"><span class="sale-price" style="color: var(--lg-red);">${toNokta(s.fiyat)} ₺</span></div>
             </div>
         `).join('') || '<p style="text-align:center; color:#999; font-size:0.85rem;">Bu ay LG satışı bulunamadı.</p>';
     }
@@ -1134,13 +1170,9 @@
         let counts = {};
         filtered.forEach(s => { if(s.marka === "LG") counts[s.modelAd] = (counts[s.modelAd] || 0) + s.adet; });
         let sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
-        let html = sorted.length > 0 ? sorted.map(([m, a]) => `
-            <div class="top-seller-item">
-                <span>${m}</span>
-                <span class="top-seller-count">${a} Adet</span>
-            </div>
+        document.getElementById('top-selling-list').innerHTML = sorted.length > 0 ? sorted.map(([m, a]) => `
+            <div class="top-seller-item"><span>${m}</span><span class="top-seller-count">${a} Adet</span></div>
         `).join('') : '<p style="color:#999; font-size:0.85rem; text-align:center;">Veri bulunamadı.</p>';
-        document.getElementById('top-selling-list').innerHTML = html;
     }
 
     function analiz(lg, top) {
@@ -1149,11 +1181,9 @@
         let avg = lg / gun;
         let est = avg * aySonu;
         let perc = (lg / parseInt(toSayi(hedef))) * 100;
-
         document.getElementById('proj-avg').innerText = toNokta(Math.round(avg)) + " ₺";
         document.getElementById('proj-est').innerText = toNokta(Math.round(est)) + " ₺";
         document.getElementById('proj-perc').innerText = "%" + (isNaN(perc) ? 0 : perc.toFixed(1));
-
         let goalBox = document.getElementById('market-goal-result');
         if(top > 0) {
             let currentPay = lg / top;
@@ -1180,7 +1210,9 @@
 
     function satisFormSifirla() {
         document.getElementById('edit-sale-id').value = "";
-        document.getElementById('f-tarih').valueAsDate = new Date(); // Tarihi bugüne çek
+        let simdi = new Date();
+        document.getElementById('f-tarih').valueAsDate = simdi;
+        document.getElementById('f-saat').value = simdi.getHours().toString().padStart(2, '0') + ":" + simdi.getMinutes().toString().padStart(2, '0');
         document.getElementById('f-fiyat').value = "";
         document.getElementById('f-adet').value = "1";
         document.getElementById('f-not').value = "";
@@ -1233,29 +1265,17 @@
         const ay = (simdi.getMonth() + 1).toString().padStart(2, '0');
         const yil = simdi.getFullYear();
         const dosyaIsmi = `LG_Yedek_${yil}_${ay}_${gun}.json`;
-        const data = {
-            satislar: satislar,
-            urunler: urunler,
-            hedef: hedef,
-            yedekTarihi: `${gun}.${ay}.${yil}`
-        };
+        const data = { satislar, urunler, hedef, yedekTarihi: `${gun}.${ay}.${yil}` };
         const jsonString = JSON.stringify(data, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = dosyaIsmi;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        a.href = url; a.download = dosyaIsmi;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         if (navigator.share) {
             try {
                 const file = new File([blob], dosyaIsmi, { type: 'application/json' });
-                await navigator.share({
-                    files: [file],
-                    title: 'LG Sales Pro Yedek',
-                    text: `${gun}.${ay}.${yil} tarihli satış yedeği.`
-                });
+                await navigator.share({ files: [file], title: 'LG Sales Pro Yedek', text: `${gun}.${ay}.${yil} tarihli satış yedeği.` });
             } catch (err) { console.log("Paylaşım iptal edildi."); }
         }
         setTimeout(() => URL.revokeObjectURL(url), 200);
