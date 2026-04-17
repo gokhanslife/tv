@@ -514,6 +514,23 @@
             height: 250px;
             position: relative;
         }
+
+        /* HEDEF TAKİP BARI STİLLERİ */
+        .goal-progress-container {
+            margin-top: 15px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+            height: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .goal-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            width: 0%;
+            transition: width 1s ease-in-out;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
@@ -690,6 +707,9 @@
                     <p>Günlük Ortalama: <b id="proj-avg">0 ₺</b></p>
                     <p>Tahmini Kapanış: <b id="proj-est">0 ₺</b></p>
                     <p>Hedef Gerçekleşme: <b id="proj-perc">%0</b></p>
+                    <div class="goal-progress-container">
+                        <div id="goal-progress-bar" class="goal-progress-bar"></div>
+                    </div>
                 </div>
             </div>
             <div id="market-goal-result" class="market-goal-box">Hesaplanıyor...</div>
@@ -1184,6 +1204,12 @@
         document.getElementById('proj-avg').innerText = toNokta(Math.round(avg)) + " ₺";
         document.getElementById('proj-est').innerText = toNokta(Math.round(est)) + " ₺";
         document.getElementById('proj-perc').innerText = "%" + (isNaN(perc) ? 0 : perc.toFixed(1));
+        
+        // HEDEF BARI GÜNCELLEME
+        let progressBar = document.getElementById('goal-progress-bar');
+        let displayPerc = Math.min(Math.max(perc, 0), 100); 
+        progressBar.style.width = displayPerc + "%";
+
         let goalBox = document.getElementById('market-goal-result');
         if(top > 0) {
             let currentPay = lg / top;
