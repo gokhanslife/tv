@@ -320,8 +320,8 @@
             color: #1e7e34;
             padding: 2px 8px;
             border-radius: 6px;
-            font-size: 0.7rem;
-            font-weight: 700;
+            font-size: 0.7rem; 
+            font-weight: 700; 
         }
 
         .sale-actions { text-align: right; min-width: 100px; }
@@ -364,7 +364,7 @@
         .dropdown-option:hover { background-color: #fff0f3; color: var(--lg-red); }
 
         .projection-card { background: linear-gradient(135deg, #fafffa 0%, #f0fff4 100%); border: 1px dashed var(--accent); }
-        .market-goal-box { background: white; border-radius: 14px; border-left: 4px solid var(--blue); padding: 18px; margin-top: 20px; box-shadow: var(--shadow-sm); }
+        .market-goal-box { background: white; border-radius: 14px; border-left: 4px solid var(--blue); padding: 18px; margin-top: 20px; box-shadow: var(--shadow-sm); line-height: 1.5; font-size: 0.95rem;}
         
         .history-grid { 
             display: grid; 
@@ -508,14 +508,12 @@
             .sale-price { font-size: 1rem; }
         }
 
-        /* Saat Analiz Grafiği Konteyner */
         .chart-container {
             margin-top: 15px;
             height: 250px;
             position: relative;
         }
 
-        /* HEDEF TAKİP BARI STİLLERİ */
         .goal-progress-container {
             margin-top: 15px;
             background: rgba(0,0,0,0.05);
@@ -531,6 +529,46 @@
             transition: width 1s ease-in-out;
             border-radius: 10px;
         }
+
+        /* YENİ FOTOĞRAF MODAL STİLLERİ */
+        .photo-btn {
+            background-color: #f1f3f5;
+            color: #555;
+            border: 1px dashed #ccc;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .photo-preview {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            max-width: 90%;
+            max-height: 80%;
+            border-radius: 10px;
+        }
+        .close-modal {
+            position: absolute;
+            top: 20px; right: 20px;
+            color: white; font-size: 30px; cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -542,6 +580,11 @@
         <div class="app-title">TV <span>Sales Pro</span></div>
     </div>
 </header>
+
+<div id="imageModal" class="modal" onclick="this.style.display='none'">
+    <span class="close-modal">&times;</span>
+    <img class="modal-content" id="modalImg">
+</div>
 
 <div class="container">
     <div class="dashboard-container">
@@ -627,6 +670,10 @@
                 
                 <label>Özel Not</label>
                 <textarea id="f-not" rows="2" placeholder="Müşteri adı vb."></textarea>
+                
+                <input type="file" id="f-photo" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+                <button type="button" class="photo-btn" onclick="document.getElementById('f-photo').click()">📷 FOTOĞRAF EKLE</button>
+                <img id="img-preview" class="photo-preview">
                 
                 <button class="btn-save" id="btn-satis-kaydet" onclick="kaydet()">SATIŞI KAYDET</button>
                 <button id="btn-satis-vazgec" class="btn-vazgec hidden" onclick="satisFormSifirla()">Vazgeç</button>
@@ -801,6 +848,7 @@
     let hedef = localStorage.getItem('lg_hedef') || "1000000";
     let selectedLGModel = "";
     let hourlyChart = null;
+    let currentPhotoBase64 = "";
 
     function toNokta(val) { return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
     function toSayi(val) { return val.toString().replace(/\./g, ""); }
@@ -811,13 +859,31 @@
         el.value = (isNegative ? '-' : '') + toNokta(temiz); 
     }
 
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentPhotoBase64 = e.target.result;
+                const preview = document.getElementById('img-preview');
+                preview.src = currentPhotoBase64;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function openPhoto(photo) {
+        if (!photo) return;
+        document.getElementById('modalImg').src = photo;
+        document.getElementById('imageModal').style.display = 'flex';
+    }
+
     function init() {
         document.getElementById('cfg-hedef').value = toNokta(hedef);
-        // Form tarihini ve saatini ayarla
         let simdi = new Date();
         document.getElementById('f-tarih').valueAsDate = simdi;
         document.getElementById('f-saat').value = simdi.getHours().toString().padStart(2, '0') + ":" + simdi.getMinutes().toString().padStart(2, '0');
-        
         updateModelSelect();
         updateHistoryMonths();
         render();
@@ -861,44 +927,31 @@
     function kaydet() {
         let marka = document.getElementById('f-marka').value;
         let modelAd = marka === "LG" ? selectedLGModel : marka + " Cihaz"; 
-        
         let fiyatInput = document.getElementById('f-fiyat').value;
         let isIade = fiyatInput.startsWith('-');
         let fiyatRaw = fiyatInput.replace(/\./g, "");
         let fiyat = parseInt(fiyatRaw) || 0;
-        
         let adet = parseInt(document.getElementById('f-adet').value) || 1;
         let not = document.getElementById('f-not').value;
         let id = document.getElementById('edit-sale-id').value;
         let saat = document.getElementById('f-saat').value || "00:00";
-        
         let fTarih = document.getElementById('f-tarih').value;
         if(!fTarih) return alert("Lütfen tarih seçin!");
         let [y, m, d] = fTarih.split('-');
         let tarihStr = `${d}.${m}.${y}`;
-
         if(!modelAd || modelAd === "Model Seçin..." || fiyat === 0) return alert("Eksik bilgi!");
-
         let primBirim = marka === "LG" ? (urunler.find(u => u.model === modelAd)?.prim || 0) : 0;
         let toplamPrim = isIade ? (primBirim * Math.abs(adet) * -1) : (primBirim * adet);
 
         if(id) {
             let i = satislar.findIndex(x => x.id == id);
-            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: toplamPrim, not, tarih: tarihStr, saat };
+            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: toplamPrim, not, tarih: tarihStr, saat, photo: currentPhotoBase64 };
         } else {
             satislar.push({ 
-                id: Date.now(), 
-                marka, 
-                modelAd, 
-                fiyat: fiyat * adet, 
-                adet, 
-                prim: toplamPrim, 
-                not: (fiyat < 0 ? "[İADE] " : "") + not,
-                tarih: tarihStr,
-                saat: saat
+                id: Date.now(), marka, modelAd, fiyat: fiyat * adet, adet, prim: toplamPrim, 
+                not: (fiyat < 0 ? "[İADE] " : "") + not, tarih: tarihStr, saat: saat, photo: currentPhotoBase64 
             });
         }
-
         localStorage.setItem('lg_satislar', JSON.stringify(satislar));
         satisFormSifirla(); 
         updateHistoryMonths();
@@ -908,17 +961,20 @@
     function satisDuzenle(id) {
         let s = satislar.find(x => x.id == id);
         document.getElementById('edit-sale-id').value = s.id;
-        
         let [d, m, y] = s.tarih.split('.');
         document.getElementById('f-tarih').value = `${y}-${m}-${d}`;
         document.getElementById('f-saat').value = s.saat || "00:00";
-
         document.getElementById('f-marka').value = s.marka;
         updateModelSelect();
         if(s.marka === "LG") selectModel(s.modelAd);
         document.getElementById('f-fiyat').value = toNokta(s.fiyat / s.adet);
         document.getElementById('f-adet').value = s.adet;
         document.getElementById('f-not').value = s.not || "";
+        if(s.photo) {
+            currentPhotoBase64 = s.photo;
+            document.getElementById('img-preview').src = s.photo;
+            document.getElementById('img-preview').style.display = 'block';
+        }
         document.getElementById('satis-form-title').innerText = "Kaydı Düzenle";
         document.getElementById('btn-satis-vazgec').classList.remove('hidden');
         window.scrollTo(0,0);
@@ -929,18 +985,13 @@
     function handleFilterChange() {
         const filterVal = document.getElementById('filter-last-sales').value;
         const datePickerDiv = document.getElementById('custom-date-picker');
-        if(filterVal === 'date') {
-            datePickerDiv.classList.remove('hidden');
-        } else {
-            datePickerDiv.classList.add('hidden');
-            render();
-        }
+        if(filterVal === 'date') datePickerDiv.classList.remove('hidden');
+        else { datePickerDiv.classList.add('hidden'); render(); }
     }
 
     function render() {
         let currentMonth = new Date().getMonth() + 1;
         let currentYear = new Date().getFullYear();
-        
         let currentSales = satislar.filter(s => {
             const [d, m, y] = s.tarih.split('.');
             return parseInt(m) === currentMonth && parseInt(y) === currentYear;
@@ -990,8 +1041,8 @@
 
         document.getElementById('satis-listesi').innerHTML = filteredLastSales.map(s => `
             <div class="sale-row">
-                <div class="sale-info">
-                    <span class="model-name">${s.modelAd} ${s.fiyat < 0 ? '<small style="color:var(--lg-red)">(İADE)</small>' : ''}</span>
+                <div class="sale-info" onclick="openPhoto('${s.photo || ''}')" style="${s.photo ? 'cursor:pointer' : ''}">
+                    <span class="model-name">${s.photo ? '📷 ' : ''}${s.modelAd} ${s.fiyat < 0 ? '<small style="color:var(--lg-red)">(İADE)</small>' : ''}</span>
                     <div class="brand-meta">
                         <span class="brand-tag">${s.marka}</span>
                         <span class="adet-badge">${s.adet} Adet</span>
@@ -1040,11 +1091,8 @@
                 hourCounts[h] += s.adet;
             }
         });
-
         const ctx = document.getElementById('hourlyChart').getContext('2d');
-        
         if (hourlyChart) hourlyChart.destroy();
-
         hourlyChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -1065,9 +1113,7 @@
                     y: { beginAtZero: true, ticks: { stepSize: 1 } },
                     x: { grid: { display: false } }
                 },
-                plugins: {
-                    legend: { display: false }
-                }
+                plugins: { legend: { display: false } }
             }
         });
     }
@@ -1077,23 +1123,11 @@
         const todaySales = currentSales.filter(s => s.tarih === todayStr);
         const lgToday = todaySales.filter(s => s.marka === "LG").reduce((a,b) => a + b.fiyat, 0);
         const currentPay = totalCiro > 0 ? (lgCiro / totalCiro) * 100 : 0;
-        
         let icon = "🚀";
         let text = "Bugün henüz LG satışı girilmedi. Hadi reyonun kralı kim göster!";
-
-        if (totalCiro > 0 && currentPay < 25) {
-            icon = "⚡";
-            text = "Pazar payı %25'in altında. Rakip markalara geçit verme, bir LG patlat!";
-        } 
-        else if (currentPay >= 35) {
-            icon = "🏆";
-            text = `Pazar Payın %${currentPay.toFixed(1)}! Reyonu resmen domine ediyorsun kral!`;
-        } 
-        else if (lgToday > 0) {
-            icon = "🔥";
-            text = `Harikasın! Bugün ${toNokta(lgToday)} ₺ değerinde LG satışı yaptın. Durmak yok!`;
-        }
-
+        if (totalCiro > 0 && currentPay < 25) { icon = "⚡"; text = "Pazar payı %25'in altında. Rakip markalara geçit verme, bir LG patlat!"; } 
+        else if (currentPay >= 35) { icon = "🏆"; text = `Pazar Payın %${currentPay.toFixed(1)}! Reyonu resmen domine ediyorsun kral!`; } 
+        else if (lgToday > 0) { icon = "🔥"; text = `Harikasın! Bugün ${toNokta(lgToday)} ₺ değerinde LG satışı yaptın. Durmak yok!`; }
         document.getElementById('motivation-icon').innerText = icon;
         document.getElementById('motivation-text').innerText = text;
     }
@@ -1102,33 +1136,19 @@
         const brands = ["LG", "Samsung", "Philips", "Thomson", "TCL", "PEAQ", "Diğer"];
         let brandStats = {};
         brands.forEach(b => brandStats[b] = { ciro: 0, adet: 0 });
-
         salesArray.forEach(s => {
             let b = brands.includes(s.marka) ? s.marka : "Diğer";
             brandStats[b].ciro += s.fiyat;
             if (s.fiyat < 0) brandStats[b].adet -= Math.abs(s.adet);
             else brandStats[b].adet += s.adet;
         });
-
-        let html = Object.entries(brandStats)
-            .sort((a, b) => b[1].ciro - a[1].ciro)
-            .map(([brand, data]) => {
+        let html = Object.entries(brandStats).sort((a, b) => b[1].ciro - a[1].ciro).map(([brand, data]) => {
                 let share = totalCiro > 0 ? (data.ciro / totalCiro) * 100 : 0;
                 if(data.ciro === 0 && data.adet === 0) return "";
                 const isLG = brand === 'LG';
-                return `
-                <div class="brand-dist-card ${isLG ? 'is-lg' : ''}">
-                    <div class="brand-dist-info">
-                        <div class="brand-initial">${brand[0]}</div>
-                        <div class="brand-details">
-                            <span class="brand-name">${brand}</span>
-                            <span class="brand-meta-small">${data.adet} Adet Satış</span>
-                        </div>
-                    </div>
-                    <div class="brand-stats-right">
-                        <span class="brand-ciro-val">${toNokta(data.ciro)} ₺</span>
-                        <span class="brand-share-badge">%${share.toFixed(1)} Pay</span>
-                    </div>
+                return `<div class="brand-dist-card ${isLG ? 'is-lg' : ''}">
+                    <div class="brand-dist-info"><div class="brand-initial">${brand[0]}</div><div class="brand-details"><span class="brand-name">${brand}</span><span class="brand-meta-small">${data.adet} Adet Satış</span></div></div>
+                    <div class="brand-stats-right"><span class="brand-ciro-val">${toNokta(data.ciro)} ₺</span><span class="brand-share-badge">%${share.toFixed(1)} Pay</span></div>
                 </div>`;
             }).join('');
         document.getElementById(containerId).innerHTML = html || '<p style="text-align:center; color:#999; font-size:0.85rem; padding: 10px;">Veri bulunamadı.</p>';
@@ -1162,19 +1182,13 @@
         document.getElementById('h-prim').innerText = toNokta(primTotal) + " ₺";
         renderBrandDistribution(f, topTotal, 'history-brand-list');
         document.getElementById('history-lg-list').innerHTML = lgSales.slice().reverse().map(s => `
-            <div class="sale-row" style="border-color: #ffeef2; background-color: #fffcfd;">
-                <div class="sale-info">
-                    <span class="model-name">${s.modelAd} ${s.fiyat < 0 ? '<small style="color:var(--lg-red)">(İADE)</small>' : ''}</span>
-                    <div class="brand-meta">
-                        <span class="brand-tag">LG</span>
-                        <span class="adet-badge">${s.adet} Adet</span>
-                        ${(s.prim != 0 && s.fiyat > 0) ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}
-                    </div>
-                    <span class="sale-date">${s.tarih} ${s.saat ? '| ' + s.saat : ''}</span>
+            <div class="sale-row" style="border-color: #ffeef2; background-color: #fffcfd;" onclick="openPhoto('${s.photo || ''}')">
+                <div class="sale-info"><span class="model-name">${s.photo ? '📷 ' : ''}${s.modelAd}</span>
+                    <div class="brand-meta"><span class="brand-tag">LG</span><span class="adet-badge">${s.adet} Adet</span>${(s.prim != 0 && s.fiyat > 0) ? `<span class="prim-badge">${toNokta(s.prim)} ₺</span>` : ''}</div>
+                    <span class="sale-date">${s.tarih}</span>
                 </div>
                 <div class="sale-actions"><span class="sale-price" style="color: var(--lg-red);">${toNokta(s.fiyat)} ₺</span></div>
-            </div>
-        `).join('') || '<p style="text-align:center; color:#999; font-size:0.85rem;">Bu ay LG satışı bulunamadı.</p>';
+            </div>`).join('') || '<p style="text-align:center; color:#999; font-size:0.85rem;">Bu ay LG satışı bulunamadı.</p>';
     }
 
     function renderTopSellers() {
@@ -1190,9 +1204,7 @@
         let counts = {};
         filtered.forEach(s => { if(s.marka === "LG") counts[s.modelAd] = (counts[s.modelAd] || 0) + s.adet; });
         let sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
-        document.getElementById('top-selling-list').innerHTML = sorted.length > 0 ? sorted.map(([m, a]) => `
-            <div class="top-seller-item"><span>${m}</span><span class="top-seller-count">${a} Adet</span></div>
-        `).join('') : '<p style="color:#999; font-size:0.85rem; text-align:center;">Veri bulunamadı.</p>';
+        document.getElementById('top-selling-list').innerHTML = sorted.length > 0 ? sorted.map(([m, a]) => `<div class="top-seller-item"><span>${m}</span><span class="top-seller-count">${a} Adet</span></div>`).join('') : '<p style="color:#999; font-size:0.85rem; text-align:center;">Veri bulunamadı.</p>';
     }
 
     function analiz(lg, top) {
@@ -1204,12 +1216,9 @@
         document.getElementById('proj-avg').innerText = toNokta(Math.round(avg)) + " ₺";
         document.getElementById('proj-est').innerText = toNokta(Math.round(est)) + " ₺";
         document.getElementById('proj-perc').innerText = "%" + (isNaN(perc) ? 0 : perc.toFixed(1));
-        
-        // HEDEF BARI GÜNCELLEME
         let progressBar = document.getElementById('goal-progress-bar');
         let displayPerc = Math.min(Math.max(perc, 0), 100); 
         progressBar.style.width = displayPerc + "%";
-
         let goalBox = document.getElementById('market-goal-result');
         if(top > 0) {
             let currentPay = lg / top;
@@ -1217,9 +1226,9 @@
                 let fark = (0.30 * top - lg) / 0.70;
                 goalBox.innerHTML = `🎯 %30 Pazar Payı için <b>${toNokta(Math.ceil(fark))} ₺</b> daha LG satmalısın.`;
             } else {
-                let rakipRisk = (lg / 0.30) - top; 
-                goalBox.innerHTML = `✅ Tebrikler! Pazar payın %${(currentPay*100).toFixed(1)} ile hedefin üzerinde. <br>
-                <span style="font-size:0.85rem; color:#666; display:block; margin-top:5px;">⚠️ Dikkat: Yaklaşık <b>${toNokta(Math.ceil(rakipRisk))} ₺</b> değerinde daha rakip satışı olursa pazar payın %30'un altına düşer!</span>`;
+                let rakipLimit = (lg / 0.30) - top; 
+                goalBox.innerHTML = `✅ Tebrikler! Pazar payın %${(currentPay*100).toFixed(1)} ile hedefin üzerinde.<br>
+                                   ⚠️ Dikkat: Yaklaşık <b>${toNokta(Math.floor(rakipLimit))} ₺</b> değerinde daha rakip satışı olursa pazar payın %30'un altına düşer!`;
             }
         }
     }
@@ -1242,6 +1251,9 @@
         document.getElementById('f-fiyat').value = "";
         document.getElementById('f-adet').value = "1";
         document.getElementById('f-not').value = "";
+        document.getElementById('f-photo').value = "";
+        document.getElementById('img-preview').style.display = 'none';
+        currentPhotoBase64 = "";
         selectedLGModel = "";
         document.getElementById('dropdown-display').innerHTML = "Model Seçin... <span>▼</span>";
         document.getElementById('btn-satis-vazgec').classList.add('hidden');
@@ -1287,21 +1299,18 @@
 
     async function veriyiYedekle() {
         const simdi = new Date();
-        const gun = simdi.getDate().toString().padStart(2, '0');
-        const ay = (simdi.getMonth() + 1).toString().padStart(2, '0');
-        const yil = simdi.getFullYear();
-        const dosyaIsmi = `LG_Yedek_${yil}_${ay}_${gun}.json`;
-        const data = { satislar, urunler, hedef, yedekTarihi: `${gun}.${ay}.${yil}` };
-        const jsonString = JSON.stringify(data, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
+        const dosyaIsmi = `LG_Yedek_${simdi.getFullYear()}_${(simdi.getMonth()+1).toString().padStart(2,'0')}_${simdi.getDate().toString().padStart(2,'0')}.json`;
+        const data = { satislar, urunler, hedef };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = dosyaIsmi;
+        const a = document.createElement('a'); a.href = url; a.download = dosyaIsmi;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        
+        // Share API desteği varsa otomatik paylaşımı açar
         if (navigator.share) {
             try {
                 const file = new File([blob], dosyaIsmi, { type: 'application/json' });
-                await navigator.share({ files: [file], title: 'LG Sales Pro Yedek', text: `${gun}.${ay}.${yil} tarihli satış yedeği.` });
+                await navigator.share({ files: [file], title: 'LG Sales Pro Yedek', text: `${dosyaIsmi} tarihli satış yedeği.` });
             } catch (err) { console.log("Paylaşım iptal edildi."); }
         }
         setTimeout(() => URL.revokeObjectURL(url), 200);
@@ -1314,7 +1323,7 @@
         reader.onload = function(e) {
             try {
                 const importedData = JSON.parse(e.target.result);
-                if (confirm("Mevcut tüm veriler silinecek ve yedek yüklenecek. Onaylıyor musun?")) {
+                if (confirm("Mevcut veriler silinecek. Onaylıyor musun?")) {
                     localStorage.setItem('lg_satislar', JSON.stringify(importedData.satislar || []));
                     localStorage.setItem('lg_urunler', JSON.stringify(importedData.urunler || []));
                     localStorage.setItem('lg_hedef', importedData.hedef || "1000000");
