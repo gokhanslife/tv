@@ -530,7 +530,39 @@
             border-radius: 10px;
         }
 
-        /* YENİ FOTOĞRAF MODAL STİLLERİ */
+        /* FOTOĞRAF ÖNİZLEME ALANI */
+        .preview-wrapper {
+            position: relative;
+            display: none;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .photo-preview {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+        }
+        .remove-photo-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(224, 49, 49, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            z-index: 5;
+        }
         .photo-btn {
             background-color: #f1f3f5;
             color: #555;
@@ -542,14 +574,7 @@
             justify-content: center;
             gap: 8px;
         }
-        .photo-preview {
-            width: 100%;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 12px;
-            margin-top: 10px;
-            display: none;
-        }
+
         .modal {
             display: none;
             position: fixed;
@@ -672,8 +697,12 @@
                 <textarea id="f-not" rows="2" placeholder="Müşteri adı vb."></textarea>
                 
                 <input type="file" id="f-photo" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
-                <button type="button" class="photo-btn" onclick="document.getElementById('f-photo').click()">📷 FOTOĞRAF EKLE</button>
-                <img id="img-preview" class="photo-preview">
+                <button type="button" class="photo-btn" id="btn-foto-sec" onclick="document.getElementById('f-photo').click()">📷 FOTOĞRAF EKLE</button>
+                
+                <div id="preview-container" class="preview-wrapper">
+                    <button type="button" class="remove-photo-btn" onclick="fotoKaldir()">×</button>
+                    <img id="img-preview" class="photo-preview">
+                </div>
                 
                 <button class="btn-save" id="btn-satis-kaydet" onclick="kaydet()">SATIŞI KAYDET</button>
                 <button id="btn-satis-vazgec" class="btn-vazgec hidden" onclick="satisFormSifirla()">Vazgeç</button>
@@ -859,18 +888,49 @@
         el.value = (isNegative ? '-' : '') + toNokta(temiz); 
     }
 
+    // FOTOĞRAF BOYUTUNU DÜŞÜREN FONKSİYON
     function handleFileSelect(event) {
         const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                currentPhotoBase64 = e.target.result;
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                // Maksimum genişlik 600px olacak şekilde ölçekle (hafıza tasarrufu)
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 600;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Kaliteyi %60'a düşürerek kaydet
+                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                
                 const preview = document.getElementById('img-preview');
+                const container = document.getElementById('preview-container');
                 preview.src = currentPhotoBase64;
-                preview.style.display = 'block';
+                container.style.display = 'block';
             };
-            reader.readAsDataURL(file);
-        }
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function fotoKaldir() {
+        currentPhotoBase64 = "";
+        document.getElementById('f-photo').value = "";
+        document.getElementById('img-preview').src = "";
+        document.getElementById('preview-container').style.display = 'none';
     }
 
     function openPhoto(photo) {
@@ -929,33 +989,54 @@
         let modelAd = marka === "LG" ? selectedLGModel : marka + " Cihaz"; 
         let fiyatInput = document.getElementById('f-fiyat').value;
         let isIade = fiyatInput.startsWith('-');
-        let fiyatRaw = fiyatInput.replace(/\./g, "");
+        let fiyatRaw = fiyatInput.replace(/\./g, "").replace("-","");
         let fiyat = parseInt(fiyatRaw) || 0;
+        if(isIade) fiyat = -fiyat;
+
         let adet = parseInt(document.getElementById('f-adet').value) || 1;
         let not = document.getElementById('f-not').value;
         let id = document.getElementById('edit-sale-id').value;
         let saat = document.getElementById('f-saat').value || "00:00";
         let fTarih = document.getElementById('f-tarih').value;
+        
         if(!fTarih) return alert("Lütfen tarih seçin!");
         let [y, m, d] = fTarih.split('-');
         let tarihStr = `${d}.${m}.${y}`;
+        
         if(!modelAd || modelAd === "Model Seçin..." || fiyat === 0) return alert("Eksik bilgi!");
+        
         let primBirim = marka === "LG" ? (urunler.find(u => u.model === modelAd)?.prim || 0) : 0;
         let toplamPrim = isIade ? (primBirim * Math.abs(adet) * -1) : (primBirim * adet);
 
+        let yeniKayit = { 
+            id: id ? parseInt(id) : Date.now(), 
+            marka, 
+            modelAd, 
+            fiyat: fiyat * adet, 
+            adet, 
+            prim: toplamPrim, 
+            not: (fiyat < 0 && !not.includes("[İADE]")) ? "[İADE] " + not : not, 
+            tarih: tarihStr, 
+            saat: saat, 
+            photo: currentPhotoBase64 
+        };
+
         if(id) {
             let i = satislar.findIndex(x => x.id == id);
-            satislar[i] = { ...satislar[i], marka, modelAd, fiyat: fiyat * adet, adet, prim: toplamPrim, not, tarih: tarihStr, saat, photo: currentPhotoBase64 };
+            satislar[i] = yeniKayit;
         } else {
-            satislar.push({ 
-                id: Date.now(), marka, modelAd, fiyat: fiyat * adet, adet, prim: toplamPrim, 
-                not: (fiyat < 0 ? "[İADE] " : "") + not, tarih: tarihStr, saat: saat, photo: currentPhotoBase64 
-            });
+            satislar.push(yeniKayit);
         }
-        localStorage.setItem('lg_satislar', JSON.stringify(satislar));
-        satisFormSifirla(); 
-        updateHistoryMonths();
-        render();
+
+        try {
+            localStorage.setItem('lg_satislar', JSON.stringify(satislar));
+            satisFormSifirla(); 
+            updateHistoryMonths();
+            render();
+        } catch(e) {
+            // Eğer hala hafıza hatası verirse, kullanıcıyı yönlendir
+            alert("Dikkat: Tarayıcı hafızası tamamen dolmuş. Lütfen çok eski kayıtları silin veya yedeği alıp verileri sıfırlayın.");
+        }
     }
 
     function satisDuzenle(id) {
@@ -966,15 +1047,26 @@
         document.getElementById('f-saat').value = s.saat || "00:00";
         document.getElementById('f-marka').value = s.marka;
         updateModelSelect();
-        if(s.marka === "LG") selectModel(s.modelAd);
-        document.getElementById('f-fiyat').value = toNokta(s.fiyat / s.adet);
+        
+        if(s.marka === "LG") {
+            selectedLGModel = s.modelAd;
+            document.getElementById('dropdown-display').innerHTML = s.modelAd + " <span>▼</span>";
+        }
+        
+        document.getElementById('f-fiyat').value = toNokta(Math.abs(s.fiyat / s.adet));
+        if(s.fiyat < 0) document.getElementById('f-fiyat').value = "-" + document.getElementById('f-fiyat').value;
+        
         document.getElementById('f-adet').value = s.adet;
         document.getElementById('f-not').value = s.not || "";
+        
         if(s.photo) {
             currentPhotoBase64 = s.photo;
             document.getElementById('img-preview').src = s.photo;
-            document.getElementById('img-preview').style.display = 'block';
+            document.getElementById('preview-container').style.display = 'block';
+        } else {
+            fotoKaldir();
         }
+        
         document.getElementById('satis-form-title').innerText = "Kaydı Düzenle";
         document.getElementById('btn-satis-vazgec').classList.remove('hidden');
         window.scrollTo(0,0);
@@ -1251,9 +1343,7 @@
         document.getElementById('f-fiyat').value = "";
         document.getElementById('f-adet').value = "1";
         document.getElementById('f-not').value = "";
-        document.getElementById('f-photo').value = "";
-        document.getElementById('img-preview').style.display = 'none';
-        currentPhotoBase64 = "";
+        fotoKaldir();
         selectedLGModel = "";
         document.getElementById('dropdown-display').innerHTML = "Model Seçin... <span>▼</span>";
         document.getElementById('btn-satis-vazgec').classList.add('hidden');
@@ -1306,7 +1396,6 @@
         const a = document.createElement('a'); a.href = url; a.download = dosyaIsmi;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         
-        // Share API desteği varsa otomatik paylaşımı açar
         if (navigator.share) {
             try {
                 const file = new File([blob], dosyaIsmi, { type: 'application/json' });
