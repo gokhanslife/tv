@@ -5,8 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LG TV Sales Pro | Premium Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    // BİLDİRİM İZNİ ALMA
+    function bildirimIznIste() {
+        if (!("Notification" in window)) {
+            console.log("Bu tarayıcı bildirim desteklemiyor.");
+        } else if (Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+    }
+
+    // BİLDİRİM GÖNDERME VE SES ÇALMA
+    function bildirimGonder(baslik, mesaj) {
+        if (Notification.permission === "granted") {
+            const n = new Notification(baslik, {
+                body: mesaj,
+                icon: "https://upload.wikimedia.org/wikipedia/commons/8/8d/LG_logo_%282014%29.svg"
+            });
+            
+            // Bildirim sesi (Standart kısa bir bip/bildirim sesi)
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+            audio.play();
+        }
+    }
+
+    // SAAT KONTROL SİSTEMİ (Her dakika kontrol eder)
+    setInterval(() => {
+        const simdi = new Date();
+        const suAnkiSaat = simdi.getHours().toString().padStart(2, '0') + ":" + simdi.getMinutes().toString().padStart(2, '0');
+        
+        satislar.forEach(s => {
+            if (s.not && s.not.includes('⭐')) {
+                // Notun içinde 00:00 formatında saat ara
+                const saatMatch = s.not.match(/([01]?[0-9]|2[0-3]):[0-5][0-9]/);
+                if (saatMatch && saatMatch[0] === suAnkiSaat) {
+                    // Eğer bu saat için daha önce bildirim atılmadıysa at (Tekrarlamaması için geçici kontrol)
+                    if (s.sonBildirimSaati !== suAnkiSaat) {
+                        bildirimGonder("LG Sales Pro Hatırlatıcı", `${s.modelAd}: ${s.not}`);
+                        s.sonBildirimSaati = suAnkiSaat; // Aynı dakika içinde tekrar çalmasın
+                    }
+                }
+            }
+        });
+    }, 30000); // 30 saniyede bir kontrol et
+
+    // Kendi init fonksiyonunun içine bildirimIznIste() eklemeyi unutma
+    function init() {
+        bildirimIznIste(); // Bildirim izni sor
+        // ... (diğer mevcut kodların)
+        document.getElementById('cfg-hedef').value = toNokta(hedef);
+        let simdi = new Date();
+        document.getElementById('f-tarih').valueAsDate = simdi;
+        // ...
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* MEVCUT TASARIMIN TAMAMI KORUNDU */
         :root { 
             --lg-red: #a50034; 
             --lg-dark-red: #820029;
@@ -530,7 +585,6 @@
             border-radius: 10px;
         }
 
-        /* FOTOĞRAF ÖNİZLEME ALANI */
         .preview-wrapper {
             position: relative;
             display: none;
@@ -575,27 +629,38 @@
             gap: 8px;
         }
 
+        /* MODAL VE ZOOM ÖZELLİĞİ */
         .modal {
             display: none;
             position: fixed;
             z-index: 2000;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.9);
+            background-color: rgba(0,0,0,0.95);
             justify-content: center;
             align-items: center;
+            overflow: hidden; /* Dışarı taşmayı engelle */
+            touch-action: none; /* Tarayıcının varsayılan kaydırmasını kapat */
         }
         .modal-content {
-            max-width: 90%;
-            max-height: 80%;
-            border-radius: 10px;
+            max-width: 95%;
+            max-height: 90%;
+            border-radius: 5px;
+            transition: transform 0.1s ease-out; /* Akıcı yakınlaştırma */
+            cursor: grab;
+            transform-origin: center center;
         }
+        .modal-content:active { cursor: grabbing; }
         .close-modal {
             position: absolute;
-            top: 20px; right: 20px;
-            color: white; font-size: 30px; cursor: pointer;
+            top: 25px; right: 25px;
+            color: white; font-size: 35px; cursor: pointer;
+            z-index: 2100;
+            background: rgba(0,0,0,0.5);
+            width: 45px; height: 45px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
         }
         
-        /* YILDIZLI NOTLAR STİLİ */
         .star-item {
             display: flex;
             justify-content: space-between;
@@ -635,9 +700,9 @@
     </div>
 </header>
 
-<div id="imageModal" class="modal" onclick="this.style.display='none'">
-    <span class="close-modal">&times;</span>
-    <img class="modal-content" id="modalImg">
+<div id="imageModal" class="modal">
+    <span class="close-modal" onclick="closeModal()">&times;</span>
+    <img class="modal-content" id="modalImg" draggable="false">
 </div>
 
 <div class="container">
@@ -908,6 +973,14 @@
     let hourlyChart = null;
     let currentPhotoBase64 = "";
 
+    // ZOOM DEĞİŞKENLERİ
+    let scale = 1;
+    let pointX = 0;
+    let pointY = 0;
+    let start = { x: 0, y: 0 };
+    const modalImg = document.getElementById('modalImg');
+    const modal = document.getElementById('imageModal');
+
     function toNokta(val) { return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
     function toSayi(val) { return val.toString().replace(/\./g, ""); }
     
@@ -917,6 +990,79 @@
         el.value = (isNegative ? '-' : '') + toNokta(temiz); 
     }
 
+    // MODAL AÇMA VE ZOOM SIFIRLAMA
+    function openPhoto(photo) {
+        if (!photo) return;
+        scale = 1;
+        pointX = 0;
+        pointY = 0;
+        modalImg.style.transform = `translate(0px, 0px) scale(1)`;
+        modalImg.src = photo;
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    // ZOOM VE PAN (SÜRÜKLEME) MANTIĞI
+    function setTransform() {
+        modalImg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+    }
+
+    modal.onmousedown = function (e) {
+        if(e.target === modalImg) {
+            e.preventDefault();
+            start = { x: e.clientX - pointX, y: e.clientY - pointY };
+            modal.onmousemove = function (e) {
+                pointX = e.clientX - start.x;
+                pointY = e.clientY - start.y;
+                setTransform();
+            }
+        }
+    }
+
+    modal.onmouseup = function () { modal.onmousemove = null; }
+
+    modal.onwheel = function (e) {
+        e.preventDefault();
+        let xs = (e.clientX - pointX) / scale,
+            ys = (e.clientY - pointY) / scale,
+            delta = (e.wheelDelta ? e.wheelDelta : -e.deltaY);
+        (delta > 0) ? (scale *= 1.2) : (scale /= 1.2);
+        if (scale < 1) scale = 1;
+        pointX = e.clientX - xs * scale;
+        pointY = e.clientY - ys * scale;
+        setTransform();
+    }
+
+    // MOBİL İÇİN TOUCH ZOOM (PINCH ZOOM)
+    let lastDist = 0;
+    modal.ontouchstart = function(e) {
+        if (e.touches.length === 2) {
+            lastDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        } else if (e.touches.length === 1) {
+            start = { x: e.touches[0].clientX - pointX, y: e.touches[0].clientY - pointY };
+        }
+    }
+
+    modal.ontouchmove = function(e) {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+            let zoom = dist / lastDist;
+            scale *= zoom;
+            if (scale < 1) scale = 1;
+            lastDist = dist;
+            setTransform();
+        } else if (e.touches.length === 1 && scale > 1) {
+            pointX = e.touches[0].clientX - start.x;
+            pointY = e.touches[0].clientY - start.y;
+            setTransform();
+        }
+    }
+
+    // DİĞER TÜM FONKSİYONLAR AYNI KALDI (kaydet, sil, init, vb.)
     function handleFileSelect(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -947,12 +1093,6 @@
         document.getElementById('f-photo').value = "";
         document.getElementById('img-preview').src = "";
         document.getElementById('preview-container').style.display = 'none';
-    }
-
-    function openPhoto(photo) {
-        if (!photo) return;
-        document.getElementById('modalImg').src = photo;
-        document.getElementById('imageModal').style.display = 'flex';
     }
 
     function init() {
@@ -1001,6 +1141,11 @@
         let fiyatRaw = fiyatInput.replace(/\./g, "").replace("-",""), fiyat = parseInt(fiyatRaw) || 0;
         if(isIade) fiyat = -fiyat;
         let adet = parseInt(document.getElementById('f-adet').value) || 1, not = document.getElementById('f-not').value, id = document.getElementById('edit-sale-id').value;
+        
+        if(not.includes('*')) {
+            not = not.replace(/\*/g, '⭐');
+        }
+
         let saat = document.getElementById('f-saat').value || "00:00", fTarih = document.getElementById('f-tarih').value;
         if(!fTarih) return alert("Lütfen tarih seçin!");
         let [y, m, d] = fTarih.split('-');
@@ -1118,7 +1263,7 @@
     }
 
     function renderStarNotes() {
-        let stars = satislar.filter(s => s.not && s.not.includes('*')).slice().reverse();
+        let stars = satislar.filter(s => s.not && s.not.includes('⭐')).slice().reverse();
         let listDiv = document.getElementById('yildizli-notlar-listesi');
         if(stars.length === 0) {
             listDiv.innerHTML = '<p style="text-align:center; color:#bbb; font-size:0.8rem; padding:10px;">Henüz yıldızlı not eklemedin.</p>';
@@ -1132,11 +1277,13 @@
     }
 
     function removeStar(id) {
-        let i = satislar.findIndex(x => x.id == id);
-        if(i !== -1) {
-            satislar[i].not = satislar[i].not.replace(/\*/g, '').trim();
-            localStorage.setItem('lg_satislar', JSON.stringify(satislar));
-            render();
+        if(confirm("Yıldızlı not takipten kaldırılsın mı?")) {
+            let i = satislar.findIndex(x => x.id == id);
+            if(i !== -1) {
+                satislar[i].not = satislar[i].not.replace(/⭐/g, '').trim();
+                localStorage.setItem('lg_satislar', JSON.stringify(satislar));
+                render();
+            }
         }
     }
 
