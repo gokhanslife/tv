@@ -1053,9 +1053,6 @@
         updateModelSelect(); updateHistoryMonths(); render();
     }
 
-    // [DİĞER TÜM JS FONKSİYONLARI BURADA DEVAM EDER - KAYDET, SİL, ANALİZ VS.]
-    // (Önceki kodun aynısı olduğu için yer kaplamaması adına özetliyorum, sen tam kodu kullanacaksın)
-
     function toggleDropdown() { document.getElementById('dropdown-menu').classList.toggle('show'); }
     function filterModels(val) {
         let opts = document.getElementsByClassName("dropdown-option");
@@ -1292,6 +1289,15 @@
 
     function urunSil(i) { if(confirm("Ürün silinsin mi?")) { urunler.splice(i,1); localStorage.setItem('lg_urunler', JSON.stringify(urunler)); updateModelSelect(); render(); } }
     function hedefGuncelle() { hedef = toSayi(document.getElementById('cfg-hedef').value); localStorage.setItem('lg_hedef', hedef); render(); alert("Güncellendi"); }
+
+    function handleFileSelect(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader(); reader.onload = function(e) {
+            currentPhotoBase64 = e.target.result; document.getElementById('img-preview').src = currentPhotoBase64; document.getElementById('preview-container').style.display = 'block';
+        }; reader.readAsDataURL(file);
+    }
+
+    function fotoKaldir() { currentPhotoBase64 = ""; document.getElementById('img-preview').src = ""; document.getElementById('preview-container').style.display = 'none'; document.getElementById('f-photo').value = ""; }
 
     async function veriyiYedekle() {
         const simdi = new Date(); const dosyaIsmi = `LG_Yedek_${simdi.getFullYear()}_${(simdi.getMonth()+1).toString().padStart(2,'0')}_${simdi.getDate().toString().padStart(2,'0')}.json`;
