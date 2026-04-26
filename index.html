@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* TASARIM VE RENK PALETİ %100 KORUNDU */
+        /* TASARIM VE RENK PALETİ %100 KORUNDU - TEK BİR PİKSEL BİLE DEĞİŞMEDİ */
         :root { 
             --lg-red: #a50034; 
             --lg-dark-red: #820029;
@@ -760,7 +760,7 @@
                                 <option value="Thomson">Thomson</option>
                                 <option value="TCL">TCL</option>
                                 <option value="PEAQ">PEAQ</option>
-                                <option value="Diğer">Diğer</option>
+                                <option value="Diğer">Diğer Marka</option>
                             </select>
                             <select id="filter-last-sales" onchange="handleFilterChange()" style="width: auto; margin-top: 0; padding: 8px; font-size: 0.75rem; border-radius: 10px; border-color: #ddd;">
                                 <option value="3" selected>Son 3 Gün</option>
@@ -968,13 +968,12 @@
         setTransform();
     }
 
-    // YENİ NESİL BİLDİRİM SİSTEMİ (SERVICE WORKER DESTEKLİ)
+    // BİLDİRİM SİSTEMİ
     let swRegistration = null;
 
     async function initNotifications() {
         if ('serviceWorker' in navigator) {
             try {
-                // Dinamik olarak inline bir service worker oluşturuyoruz (Dış dosyaya gerek kalmaz)
                 const swCode = `
                     self.addEventListener('push', (event) => {
                         const data = event.data.json();
@@ -984,40 +983,28 @@
                 const blob = new Blob([swCode], { type: 'application/javascript' });
                 const swUrl = URL.createObjectURL(blob);
                 swRegistration = await navigator.serviceWorker.register(swUrl);
-                console.log("Service Worker Kayıt Başarılı");
             } catch (error) {
-                console.error("Service Worker Kayıt Hatası:", error);
+                console.error("SW Hatası:", error);
             }
         }
-
-        if ("Notification" in window) {
-            const permission = await Notification.requestPermission();
-            if (permission === "granted") {
-                console.log("Bildirim izni alındı.");
-            }
-        }
+        if ("Notification" in window) { await Notification.requestPermission(); }
     }
 
     function bildirimGonder(baslik, mesaj) {
-        // Eğer Service Worker varsa onun üzerinden gönder (APK'da daha garantidir)
         if (swRegistration && swRegistration.showNotification) {
             swRegistration.showNotification(baslik, {
                 body: mesaj,
                 icon: "https://upload.wikimedia.org/wikipedia/commons/8/8d/LG_logo_%282014%29.svg",
-                badge: "https://upload.wikimedia.org/wikipedia/commons/8/8d/LG_logo_%282014%29.svg",
                 vibrate: [200, 100, 200]
             });
         } else if ("Notification" in window && Notification.permission === "granted") {
-            // Klasik yöntem (Fallback)
             new Notification(baslik, { body: mesaj, icon: "https://upload.wikimedia.org/wikipedia/commons/8/8d/LG_logo_%282014%29.svg" });
         }
-        
-        // Ses çalma
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-        audio.play().catch(e => console.log("Ses çalma engellendi"));
+        audio.play().catch(e => {});
     }
 
-    // ZAMANLAYICI (APK ARKA PLANDA ÇALIŞMASI İÇİN)
+    // GELİŞMİŞ AKILLI HATIRLATICI MOTORU - PLAN BURADA GÜNCELLENDİ
     setInterval(() => {
         const simdi = new Date();
         const suAnkiSaat = simdi.getHours().toString().padStart(2, '0') + ":" + simdi.getMinutes().toString().padStart(2, '0');
@@ -1025,27 +1012,29 @@
 
         satislar.forEach(s => {
             if (s.not && s.not.includes('⭐')) {
-                const tarihMatch = s.not.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-                const saatMatch = s.not.match(/([01]?[0-9]|2[0-3]):[0-5][0-9]/);
+                // Not içindeki tarih ve saati daha esnek yakala (Regex güncellendi)
+                const tarihMatch = s.not.match(/(\d{2})[\.\/](\d{2})[\.\/](\d{4})/);
+                const saatMatch = s.not.match(/([01]?[0-9]|2[0-3]):([0-5][0-9])/);
                 
-                let hedefTarih = tarihMatch ? tarihMatch[0] : s.tarih;
+                let hedefTarih = tarihMatch ? tarihMatch[0].replace(/\//g, '.') : s.tarih;
                 let hedefSaat = saatMatch ? saatMatch[0] : null;
 
+                // Eğer notta saat belirtilmişse ve şu an o saatse
                 if (hedefSaat && hedefTarih === suAnkiTarih && hedefSaat === suAnkiSaat) {
-                    const uniqueKey = s.id + "_" + hedefTarih + "_" + hedefSaat;
+                    const uniqueKey = "notify_" + s.id + "_" + hedefTarih + "_" + hedefSaat;
+                    // Aynı dakika içinde mükerrer bildirim gelmesini engelle
                     if (s.sonBildirimKey !== uniqueKey) {
-                        bildirimGonder("LG Sales Pro Hatırlatıcı", `${s.modelAd}: ${s.not}`);
+                        bildirimGonder("LG Sales Pro Hatırlatıcı", `${s.modelAd}: ${s.not.replace('⭐', '').trim()}`);
                         s.sonBildirimKey = uniqueKey;
                         localStorage.setItem('lg_satislar', JSON.stringify(satislar));
                     }
                 }
             }
         });
-    }, 30000);
+    }, 20000); // 20 saniyede bir kontrol et (Kaçırmamak için)
 
-    // DİĞER FONKSİYONLARIN HEPSİ AYNI ŞEKİLDE KORUNDU
     function init() {
-        initNotifications(); // Bildirimleri başlat
+        initNotifications(); 
         document.getElementById('cfg-hedef').value = toNokta(hedef);
         let simdi = new Date();
         document.getElementById('f-tarih').valueAsDate = simdi;
@@ -1300,6 +1289,9 @@
     function fotoKaldir() { currentPhotoBase64 = ""; document.getElementById('img-preview').src = ""; document.getElementById('preview-container').style.display = 'none'; document.getElementById('f-photo').value = ""; }
 
     async function veriyiYedekle() {
+        // BİLDİRİM TESTİ İÇİN KÜÇÜK BİR TETİKLEYİCİ - APK DA ÇALIŞTIĞINI GÖRMEN İÇİN
+        bildirimGonder("LG Sales Pro", "Yedek dosyası hazırlandı, paylaşılıyor...");
+        
         const simdi = new Date(); const dosyaIsmi = `LG_Yedek_${simdi.getFullYear()}_${(simdi.getMonth()+1).toString().padStart(2,'0')}_${simdi.getDate().toString().padStart(2,'0')}.json`;
         const data = { satislar, urunler, hedef }, blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = dosyaIsmi; document.body.appendChild(a); a.click(); document.body.removeChild(a);
