@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* MEVCUT TASARIMIN TAMAMI KORUNDU */
+        /* TASARIM VE RENK PALETİ %100 KORUNDU */
         :root { 
             --lg-red: #a50034; 
             --lg-dark-red: #820029;
@@ -734,7 +734,7 @@
                 </div>
                 
                 <label>Özel Not (Yıldız '*' eklersen takip listesine alınır)</label>
-                <textarea id="f-not" rows="2" placeholder="Örn: Haftaya teslim edilecek 15:30*"></textarea>
+                <textarea id="f-not" rows="2" placeholder="Örn: Müşteri gelecek 28.04.2026 15:30*"></textarea>
                 
                 <input type="file" id="f-photo" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
                 <button type="button" class="photo-btn" id="btn-foto-sec" onclick="document.getElementById('f-photo').click()">📷 FOTOĞRAF EKLE</button>
@@ -1016,19 +1016,26 @@
         }
     }
 
-    // Her dakika kontrolü
+    // GELİŞMİŞ TARİH VE SAAT KONTROLÜ (30 Saniyede bir)
     setInterval(() => {
         const simdi = new Date();
         const suAnkiSaat = simdi.getHours().toString().padStart(2, '0') + ":" + simdi.getMinutes().toString().padStart(2, '0');
-        const bugunStr = simdi.toLocaleDateString('tr-TR');
+        const suAnkiTarih = simdi.toLocaleDateString('tr-TR'); // Örn: 28.04.2026
 
         satislar.forEach(s => {
-            if (s.not && s.not.includes('⭐') && s.tarih === bugunStr) {
+            if (s.not && s.not.includes('⭐')) {
+                // Notun içindeki Tarih (GG.AA.YYYY) ve Saat (SS:DD) desenlerini ara
+                const tarihMatch = s.not.match(/(\d{2})\.(\d{2})\.(\d{4})/);
                 const saatMatch = s.not.match(/([01]?[0-9]|2[0-3]):[0-5][0-9]/);
-                if (saatMatch && saatMatch[0] === suAnkiSaat) {
-                    if (s.sonBildirimSaati !== suAnkiSaat) {
+                
+                let hedefTarih = tarihMatch ? tarihMatch[0] : s.tarih; // Tarih yazılmadıysa kayıt tarihini baz al
+                let hedefSaat = saatMatch ? saatMatch[0] : null;
+
+                if (hedefSaat && hedefTarih === suAnkiTarih && hedefSaat === suAnkiSaat) {
+                    const uniqueKey = s.id + "_" + hedefTarih + "_" + hedefSaat;
+                    if (s.sonBildirimKey !== uniqueKey) {
                         bildirimGonder("LG Sales Pro Hatırlatıcı", `${s.modelAd}: ${s.not}`);
-                        s.sonBildirimSaati = suAnkiSaat;
+                        s.sonBildirimKey = uniqueKey;
                         localStorage.setItem('lg_satislar', JSON.stringify(satislar));
                     }
                 }
