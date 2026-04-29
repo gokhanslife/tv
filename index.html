@@ -890,6 +890,8 @@
                         </div>
                     </div>
                     <div id="history-brand-list" class="brand-distribution-grid"></div>
+                    
+                    <h3 style="margin-top:25px; margin-bottom:15px;">Ay İçindeki Tüm LG Satışları</h3>
                     <div id="history-lg-list"></div>
                 </div>
             </div>
@@ -924,6 +926,7 @@
     let pointX = 0;
     let pointY = 0;
     let start = { x: 0, y: 0 };
+    let initialDist = 0; // Pinch zoom için
     const modalImg = document.getElementById('modalImg');
     const modal = document.getElementById('imageModal');
 
@@ -936,7 +939,7 @@
         el.value = (isNegative ? '-' : '') + toNokta(temiz); 
     }
 
-    // MODAL VE ZOOM FONKSİYONLARI
+    // MODAL VE ZOOM FONKSİYONLARI (GÜNCELLENDİ: MOBİL TOUCH DESTEĞİ)
     function openPhoto(photo) {
         if (!photo) return;
         scale = 1; pointX = 0; pointY = 0;
@@ -947,6 +950,7 @@
     function closeModal() { modal.style.display = 'none'; }
     function setTransform() { modalImg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`; }
 
+    // MOUSE EVENTLERİ (PC İÇİN)
     modal.onmousedown = function (e) {
         if(e.target === modalImg) {
             e.preventDefault();
@@ -967,6 +971,35 @@
         pointX = e.clientX - xs * scale; pointY = e.clientY - ys * scale;
         setTransform();
     }
+
+    // TOUCH EVENTLERİ (MOBİL İÇİN ZOOM VE PAN)
+    modal.addEventListener('touchstart', function(e) {
+        if (e.target === modalImg) {
+            if (e.touches.length === 1) {
+                start = { x: e.touches[0].clientX - pointX, y: e.touches[0].clientY - pointY };
+            } else if (e.touches.length === 2) {
+                initialDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            }
+        }
+    }, {passive: false});
+
+    modal.addEventListener('touchmove', function(e) {
+        if (e.target === modalImg) {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                pointX = e.touches[0].clientX - start.x;
+                pointY = e.touches[0].clientY - start.y;
+            } else if (e.touches.length === 2) {
+                let dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                let zoomFactor = dist / initialDist;
+                scale *= zoomFactor;
+                initialDist = dist;
+                if (scale < 1) scale = 1;
+                if (scale > 5) scale = 5;
+            }
+            setTransform();
+        }
+    }, {passive: false});
 
     // BİLDİRİM SİSTEMİ
     let swRegistration = null;
@@ -1003,31 +1036,23 @@
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
         audio.play().catch(e => {});
     }
-// Akıllı Hatırlatıcı Motoru (Güncellenmiş Güvenli Versiyon)
+
     setInterval(() => {
         const simdi = new Date();
         const suAnkiTarih = simdi.toLocaleDateString('tr-TR');
         const suAnkiSaat = simdi.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-        
-        // Senin kodundaki karşılaştırma kısmı burası:
         const suAnkiZaman = `${suAnkiTarih} ${suAnkiSaat}`;
 
         satislar.forEach(satis => {
-            if (satis.notlar && satis.notlar.length > 0) {
-                satis.notlar.forEach(not => {
-                    // Notun hatırlatıcı zamanı boş değilse ve şu anki zamana eşitse
-                    if (not.hatirlatici && not.hatirlatici.trim() === suAnkiZaman) {
-                        // Aynı dakika içinde tekrar tekrar bildirim gelmemesi için kontrol
-                        const bildirimId = `sent_${satis.id}_${not.id}_${suAnkiZaman}`;
-                        if (!window[bildirimId]) {
-                            bildirimGonder("LG Satış Hatırlatıcı", `${satis.musteri} - ${not.metin}`);
-                            window[bildirimId] = true; // Bu dakika için bildirimi işaretle
-                        }
-                    }
-                });
+            if (satis.not && satis.not.includes(suAnkiZaman)) {
+                const bildirimId = `sent_${satis.id}_${suAnkiZaman}`;
+                if (!window[bildirimId]) {
+                    bildirimGonder("LG Satış Hatırlatıcı", `${satis.modelAd} - ${satis.not}`);
+                    window[bildirimId] = true;
+                }
             }
         });
-    }, 10000); // 10 saniyede bir kontrol eder (Daha az işlemci harcar)
+    }, 30000);
 
     function init() {
         initNotifications(); 
@@ -1216,6 +1241,19 @@
         document.getElementById('h-pay').innerText = "%" + (topTotal > 0 ? (lgTotal / topTotal * 100).toFixed(1) : 0);
         document.getElementById('h-prim').innerText = toNokta(primTotal) + " ₺";
         renderBrandDistribution(f, topTotal, 'history-brand-list');
+        
+        // GÜNCELLENDİ: GEÇMİŞ AY DETAYLI LG LİSTESİ
+        let lgListDiv = document.getElementById('history-lg-list');
+        lgListDiv.innerHTML = lgSales.slice().reverse().map(s => `
+            <div class="sale-row" style="border-left: 4px solid var(--lg-red);">
+                <div class="sale-info" onclick="openPhoto('${s.photo || ''}')">
+                    <span class="model-name">${s.photo ? '📷 ' : ''}${s.modelAd}</span>
+                    <div class="brand-meta"><span class="adet-badge">${s.adet} Adet</span><span class="prim-badge">${toNokta(s.prim)} ₺</span></div>
+                    <span class="sale-date">${s.tarih} | ${s.saat} ${s.not ? '| ' + s.not : ''}</span>
+                </div>
+                <div class="sale-actions"><span class="sale-price" style="color:var(--lg-red)">${toNokta(s.fiyat)} ₺</span></div>
+            </div>
+        `).join('') || '<p style="text-align:center; color:#999;">Bu ay LG satışı bulunmuyor.</p>';
     }
 
     function renderTopSellers() {
@@ -1275,10 +1313,24 @@
     function urunSil(i) { if(confirm("Ürün silinsin mi?")) { urunler.splice(i,1); localStorage.setItem('lg_urunler', JSON.stringify(urunler)); updateModelSelect(); render(); } }
     function hedefGuncelle() { hedef = toSayi(document.getElementById('cfg-hedef').value); localStorage.setItem('lg_hedef', hedef); render(); alert("Güncellendi"); }
 
+    // GÜNCELLENDİ: FOTOĞRAF SIKIŞTIRMA MANTIĞI
     function handleFileSelect(event) {
         const file = event.target.files[0]; if (!file) return;
         const reader = new FileReader(); reader.onload = function(e) {
-            currentPhotoBase64 = e.target.result; document.getElementById('img-preview').src = currentPhotoBase64; document.getElementById('preview-container').style.display = 'block';
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800; // Maksimum genişlik 800px yapıldı
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.7); // Kalite %70 sıkıştırıldı
+                document.getElementById('img-preview').src = currentPhotoBase64; 
+                document.getElementById('preview-container').style.display = 'block';
+            };
+            img.src = e.target.result;
         }; reader.readAsDataURL(file);
     }
 
